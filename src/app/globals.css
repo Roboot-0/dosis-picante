@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-bebas: "Bebas Neue", cursive;
+  --font-source: "Source Sans 3", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto; /* Lenis maneja el scroll */
+}
+
+body {
+  background-color: #1C1917;
+  color: #FAFAF9;
+  font-family: var(--font-source);
+  overflow-x: hidden;
+}
+
+/* Selección de texto con color de marca */
+::selection {
+  background-color: #DC2626;
+  color: #FAFAF9;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #1C1917;
+}
+::-webkit-scrollbar-thumb {
+  background: #DC2626;
+  border-radius: 2px;
+}
+
+/* Noise texture overlay */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Texto gradiente rojo-oro */
+.text-fuego {
+  background: linear-gradient(135deg, #DC2626 0%, #D97706 50%, #DC2626 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow rojo */
+.glow-rojo {
+  text-shadow: 0 0 40px #DC262688, 0 0 80px #DC262633;
+}
+
+/* Línea decorativa */
+.linea-fuego {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #DC2626, #D97706, transparent);
+}
+
+/* Focus visible — accesibilidad por teclado */
+*:focus-visible {
+  outline: 2px solid #DC2626;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Respetar usuarios con preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
