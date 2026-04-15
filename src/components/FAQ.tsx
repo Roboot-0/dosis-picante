@@ -100,7 +100,7 @@ export default function FAQ() {
         >
           ¿Otra pregunta? Escríbenos por{" "}
           <a
-            href="https://wa.me/584241788803"
+            href="https://wa.me/584142624078"
             target="_blank"
             rel="noopener noreferrer"
             className="text-rojo hover:underline"

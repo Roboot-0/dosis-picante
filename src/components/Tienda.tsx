@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────────
 const PAGO_MOVIL = { telefono: "0414-262-4078", cedula: "V-11.741.520", nombre: "DOSIS C.A." };
-const WA_BASE = "https://wa.me/584241788803";
+const WA_BASE = "https://wa.me/584142624078";
 // ────────────────────────────────────────────────────────────────────────────
 
 const PRODUCTOS = [

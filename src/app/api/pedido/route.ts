@@ -280,7 +280,7 @@ export async function POST(req: NextRequest) {
 
           <p style="color:#aaa;font-size:13px;line-height:1.7;margin:24px 0 8px;">
             Si tienes alguna duda, responde este correo o escríbenos al WhatsApp
-            <a href="https://wa.me/584241788803" style="color:#DC2626;text-decoration:none;">+58 424-178-8803</a>.
+            <a href="https://wa.me/584142624078" style="color:#DC2626;text-decoration:none;">+58 414-262-4078</a>.
           </p>
 
           <p style="color:#e5e0d8;font-size:14px;margin:24px 0 0;">

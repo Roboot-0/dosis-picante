@@ -46,7 +46,7 @@ export default function Footer() {
             className="font-mono text-[10px] tracking-[0.3em] text-crema/30 hover:text-rojo transition-colors uppercase">
             @dosis_ve
           </a>
-          <a href="https://wa.me/584241788803" target="_blank" rel="noopener noreferrer"
+          <a href="https://wa.me/584142624078" target="_blank" rel="noopener noreferrer"
             className="font-mono text-[10px] tracking-[0.3em] text-crema/30 hover:text-rojo transition-colors uppercase">
             WhatsApp
           </a>

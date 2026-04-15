@@ -87,7 +87,7 @@ export default function CTAFinal() {
 
           {/* WhatsApp — contacto directo */}
           <a
-            href="https://wa.me/584241788803?text=Hola%20DOSIS%2C%20quiero%20hablar%20con%20ustedes"
+            href="https://wa.me/584142624078?text=Hola%20DOSIS%2C%20quiero%20hablar%20con%20ustedes"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 px-10 py-5 border border-crema/20 text-crema/70 font-bebas text-xl tracking-[0.2em] uppercase hover:border-rojo hover:text-rojo transition-all duration-300"
