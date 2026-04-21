@@ -19,7 +19,7 @@ const PRODUCTOS = [
 type Cart = Record<string, number>;
 type DeliveryType = "caracas" | "nacional";
 type PaymentMethod = "pagomovil" | "efectivo";
-interface FormData { nombre: string; email: string; telefono: string; direccion: string; ciudad: string; deliveryType: DeliveryType; }
+interface FormData { nombre: string; email: string; telefono: string; cedula: string; direccion: string; ciudad: string; deliveryType: DeliveryType; }
 interface Comprobante { base64: string; mimeType: string; nombre: string; preview: string; }
 
 // ─── FIELD (a nivel de módulo para no perder el focus) ───────────────────────
@@ -122,7 +122,7 @@ function StepCarrito({ cart, setCart, onNext }: { cart: Cart; setCart: (c: Cart)
 // ─── STEP 2: DATOS ───────────────────────────────────────────────────────────
 function StepDatos({ form, setForm, onNext, onBack }: { form: FormData; setForm: (f: FormData) => void; onNext: () => void; onBack: () => void }) {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-  const valid = form.nombre.trim() && emailOk && form.telefono.trim() && form.direccion.trim() && form.ciudad.trim();
+  const valid = form.nombre.trim() && emailOk && form.telefono.trim() && form.cedula.trim() && form.direccion.trim() && form.ciudad.trim();
   const set = (k: keyof FormData) => (v: string) => setForm({ ...form, [k]: v });
   return (
     <div className="space-y-3">
@@ -130,7 +130,10 @@ function StepDatos({ form, setForm, onNext, onBack }: { form: FormData; setForm:
         <FormField label="Nombre" value={form.nombre} onChange={set("nombre")} placeholder="Juan Pérez" />
         <FormField label="Teléfono / WhatsApp" value={form.telefono} onChange={set("telefono")} placeholder="0412-000-0000" type="tel" />
       </div>
-      <FormField label="Correo electrónico" value={form.email} onChange={set("email")} placeholder="tu@correo.com" type="email" />
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Correo electrónico" value={form.email} onChange={set("email")} placeholder="tu@correo.com" type="email" />
+        <FormField label="Cédula de Identidad" value={form.cedula} onChange={set("cedula")} placeholder="V-12.345.678" />
+      </div>
       <div>
         <p className="text-[9px] tracking-[0.3em] uppercase font-mono text-crema/35 mb-1.5">Tipo de entrega</p>
         <div className="grid grid-cols-2 gap-px bg-carbon-medio">
@@ -386,7 +389,7 @@ function StepConfirmado({ nombre, onReset }: { nombre: string; onReset: () => vo
 function CheckoutModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
   const [cart, setCart] = useState<Cart>({});
-  const [form, setForm] = useState<FormData>({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "", deliveryType: "caracas" });
+  const [form, setForm] = useState<FormData>({ nombre: "", email: "", telefono: "", cedula: "", direccion: "", ciudad: "", deliveryType: "caracas" });
   const [payment, setPayment] = useState<PaymentMethod>("pagomovil");
   const [comprobante, setComprobante] = useState<Comprobante | null>(null);
   const [tasaBCV, setTasaBCV] = useState<number | null>(null);
@@ -485,7 +488,7 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
 
   const reset = () => {
     setStep(1); setCart({}); setComprobante(null); setTasaBCV(null);
-    setForm({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "", deliveryType: "caracas" });
+    setForm({ nombre: "", email: "", telefono: "", cedula: "", direccion: "", ciudad: "", deliveryType: "caracas" });
     setPayment("pagomovil");
   };
 

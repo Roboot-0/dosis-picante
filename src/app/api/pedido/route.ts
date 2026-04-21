@@ -47,6 +47,7 @@ type PedidoFormLike = {
   nombre?: string;
   email?: string;
   telefono?: string;
+  cedula?: string;
   direccion?: string;
   ciudad?: string;
   deliveryType?: string;
@@ -69,7 +70,7 @@ function guardarClienteEnCSV(
     const esNuevo = !fs.existsSync(csvPath);
     if (esNuevo) {
       const header =
-        "\uFEFFFecha,Hora,Nombre,Email,Teléfono,Dirección,Ciudad,Entrega,Método de pago,Total (USD),Productos\n";
+        "\uFEFFFecha,Hora,Nombre,Email,Teléfono,Cédula,Dirección,Ciudad,Entrega,Método de pago,Total (USD),Productos\n";
       fs.writeFileSync(csvPath, header, "utf-8");
     }
 
@@ -97,6 +98,7 @@ function guardarClienteEnCSV(
       form.nombre || "",
       form.email || "",
       form.telefono || "",
+      form.cedula || "",
       form.direccion || "",
       form.ciudad || "",
       deliveryLabel,
@@ -183,6 +185,7 @@ export async function POST(req: NextRequest) {
 
         <div style="border:1px solid #292524;padding:16px;margin-bottom:16px;background:#111;">
           <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Nombre:</strong> ${form.nombre}</p>
+          <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Cédula:</strong> ${form.cedula || "—"}</p>
           <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Teléfono:</strong> ${form.telefono}</p>
           <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Dirección:</strong> ${form.direccion}, ${form.ciudad}</p>
           <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Entrega:</strong> ${deliveryLabel}</p>
@@ -362,7 +365,7 @@ export async function POST(req: NextRequest) {
           totalBs:        typeof montoBS === "number" ? montoBS : undefined,
           metodoPago:     payment === "pagomovil" ? "Pago Móvil" : "Efectivo",
           direccionEnvio: `${form.direccion ?? ""}, ${form.ciudad ?? ""}`.trim().replace(/^,\s*/, ""),
-          notas:          `Entrega: ${deliveryLabel}${comprobante ? " · Comprobante en email admin" : ""}`,
+          notas:          `Entrega: ${deliveryLabel}${form.cedula ? ` · Cédula: ${form.cedula}` : ""}${comprobante ? " · Comprobante en email admin" : ""}`,
         });
         airtableIdPedido = idFinal;
         logDebug(`Airtable OK (sin email). idPedido=${idFinal}`);
@@ -395,7 +398,7 @@ export async function POST(req: NextRequest) {
           totalBs:        typeof montoBS === "number" ? montoBS : undefined,
           metodoPago:     payment === "pagomovil" ? "Pago Móvil" : "Efectivo",
           direccionEnvio: `${form.direccion ?? ""}, ${form.ciudad ?? ""}`.trim().replace(/^,\s*/, ""),
-          notas:          `Entrega: ${deliveryLabel}${comprobante ? " · Comprobante en email admin" : ""}`,
+          notas:          `Entrega: ${deliveryLabel}${form.cedula ? ` · Cédula: ${form.cedula}` : ""}${comprobante ? " · Comprobante en email admin" : ""}`,
         });
         airtableIdPedido = idFinal;
         logDebug(`Airtable OK. idPedido=${idFinal} clienteId=${clienteId}`);
