@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.dosispicante.com"),
   title: "Dosis Picante — Salsas Artesanales que Queman Diferente",
   description:
-    "Salsas picantes artesanales fermentadas naturalmente en Caracas. Tres niveles de intensidad: MICRODOSIS, AHUMADOSIS y SOBREDOSIS. Formato gotero 30 ml.",
+    "Salsas picantes artesanales fermentadas naturalmente en Caracas. Tres niveles de intensidad: MICRODOSIS y AHUMADOSIS (50 ml) y SOBREDOSIS (30 ml). Formato gotero.",
   keywords: [
     "salsa picante",
     "salsa picante venezolana",
@@ -134,14 +134,14 @@ export default function RootLayout({
                   "@id": "https://www.dosispicante.com/#microdosis",
                   name: "MICRODOSIS",
                   description:
-                    "Salsa picante fermentada con habanero y ají dulce venezolano. ~40,000 SHU. Formato gotero 30 ml.",
+                    "Salsa picante fermentada con habanero y ají dulce venezolano. ~40,000 SHU. Formato gotero 50 ml.",
                   image: "https://www.dosispicante.com/images/microdosis.png",
                   url: "https://www.dosispicante.com/#productos",
                   brand: { "@type": "Brand", name: "Dosis Picante" },
                   category: "Salsa picante artesanal",
                   offers: {
                     "@type": "Offer",
-                    price: "5.00",
+                    price: "6.00",
                     priceCurrency: "USD",
                     availability: "https://schema.org/InStock",
                     url: "https://www.dosispicante.com/#tienda",
@@ -152,14 +152,14 @@ export default function RootLayout({
                   "@id": "https://www.dosispicante.com/#ahumadosis",
                   name: "AHUMADOSIS",
                   description:
-                    "Salsa picante fermentada con habanero y Carolina Reaper ahumado. ~100,000 SHU. Formato gotero 30 ml.",
+                    "Salsa picante fermentada con habanero y Carolina Reaper ahumado. ~100,000 SHU. Formato gotero 50 ml.",
                   image: "https://www.dosispicante.com/images/ahumadosis.png",
                   url: "https://www.dosispicante.com/#productos",
                   brand: { "@type": "Brand", name: "Dosis Picante" },
                   category: "Salsa picante artesanal",
                   offers: {
                     "@type": "Offer",
-                    price: "5.00",
+                    price: "6.00",
                     priceCurrency: "USD",
                     availability: "https://schema.org/InStock",
                     url: "https://www.dosispicante.com/#tienda",
@@ -188,14 +188,14 @@ export default function RootLayout({
                   "@id": "https://www.dosispicante.com/#kit",
                   name: "KIT DOSIS",
                   description:
-                    "Colección completa: las 3 salsas picantes artesanales de DOSIS (Microdosis, Ahumadosis y Sobredosis) en un solo kit. Formato 3 × 30 ml. Ahorra $2 vs. comprarlas por separado.",
+                    "Colección completa: las 3 salsas picantes artesanales de DOSIS (Microdosis, Ahumadosis y Sobredosis) en un solo kit. Formato 50+50+30 ml. Ahorra $2 vs. comprarlas por separado.",
                   image: "https://www.dosispicante.com/images/kit.jpeg",
                   url: "https://www.dosispicante.com/#productos",
                   brand: { "@type": "Brand", name: "Dosis Picante" },
                   category: "Kit de salsas picantes",
                   offers: {
                     "@type": "Offer",
-                    price: "20.00",
+                    price: "22.00",
                     priceCurrency: "USD",
                     availability: "https://schema.org/InStock",
                     url: "https://www.dosispicante.com/#tienda",

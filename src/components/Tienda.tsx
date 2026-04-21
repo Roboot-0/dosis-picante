@@ -10,10 +10,10 @@ const WA_BASE = "https://wa.me/584142624078";
 // ────────────────────────────────────────────────────────────────────────────
 
 const PRODUCTOS = [
-  { id: "microdosis", nombre: "MICRODOSIS", tagline: "El primer contacto",   precio: 5,  ml: "30 ml",      imagen: "/images/microdosis.png", color: "#D97706", nivel: 1 },
-  { id: "ahumadosis", nombre: "AHUMADOSIS", tagline: "La que convierte",      precio: 5,  ml: "30 ml",      imagen: "/images/ahumadosis.png", color: "#EA580C", nivel: 2 },
+  { id: "microdosis", nombre: "MICRODOSIS", tagline: "El primer contacto",   precio: 6,  ml: "50 ml",      imagen: "/images/microdosis.png", color: "#D97706", nivel: 1 },
+  { id: "ahumadosis", nombre: "AHUMADOSIS", tagline: "La que convierte",      precio: 6,  ml: "50 ml",      imagen: "/images/ahumadosis.png", color: "#EA580C", nivel: 2 },
   { id: "sobredosis", nombre: "SOBREDOSIS", tagline: "La última advertencia", precio: 12, ml: "30 ml",      imagen: "/images/sobredosis.png", color: "#DC2626", nivel: 3 },
-  { id: "kit",        nombre: "KIT DOSIS",  tagline: "Colección completa",    precio: 20, ml: "3 × 30 ml",  imagen: "/images/kit.jpeg",       color: "#9CA3AF", nivel: 3 },
+  { id: "kit",        nombre: "KIT DOSIS",  tagline: "Colección completa",    precio: 22, ml: "50+50+30 ml", imagen: "/images/kit.jpeg",       color: "#9CA3AF", nivel: 3 },
 ];
 
 type Cart = Record<string, number>;

@@ -14,8 +14,8 @@ const salsas = [
       "Habanero + Ají dulce venezolano. Fermentada naturalmente. El calor llega despacio, con sabor y sin apresurarse. Tu puerta de entrada al universo DOSIS.",
     nivel: 1,
     scoville: "~40,000 SHU",
-    ml: "30 ml",
-    precio: 5,
+    ml: "50 ml",
+    precio: 6,
     color: "#D97706",
     imagen: "/images/microdosis.png",
     lifestyle: "/images/uso-microdosis.jpg",
@@ -31,8 +31,8 @@ const salsas = [
       "Habanero + Carolina Reaper ahumado. Un perfil profundo que empieza en el paladar y termina en adicción. El ahumado llega primero, el fuego después.",
     nivel: 2,
     scoville: "~100,000 SHU",
-    ml: "30 ml",
-    precio: 5,
+    ml: "50 ml",
+    precio: 6,
     color: "#EA580C",
     imagen: "/images/ahumadosis.png",
     lifestyle: "/images/uso-ahumadosis.jpg",
@@ -277,9 +277,9 @@ export default function Productos() {
               completa, de menor a mayor intensidad. O al revés.
             </p>
             <div className="flex items-baseline gap-3">
-              <span className="font-bebas text-5xl text-rojo leading-none">$20</span>
+              <span className="font-bebas text-5xl text-rojo leading-none">$22</span>
               <span className="font-mono text-xs text-crema/40 tracking-widest uppercase">
-                3 × 30 ml · ahorras $2
+                50+50+30 ml · ahorras $2
               </span>
             </div>
             <button
