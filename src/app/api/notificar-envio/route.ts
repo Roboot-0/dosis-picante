@@ -10,8 +10,54 @@ const REPLY_TO = "dosispicante@gmail.com";
 // Admin recibe copia del correo de despacho
 const ADMIN_CC = "dosispicante@gmail.com";
 
-// Clave secreta para que solo se pueda llamar desde Airtable o admin
+// Clave secreta separada — se configura en Vercel como NOTIFICACION_SECRET.
+// Si no está, cae al RESEND_API_KEY como fallback temporal (NO recomendado en producción).
 const API_SECRET = process.env.NOTIFICACION_SECRET || process.env.RESEND_API_KEY;
+
+// IDs de Airtable (tabla Pedidos en la base DOSIS)
+const AIRTABLE_API = "https://api.airtable.com/v0";
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "appxJuRghB7SNB5md";
+const TBL_PEDIDOS = "tbl3YXihFUiElzG05";
+
+// ─── Helpers de Airtable ─────────────────────────────────────────────────────
+
+/** Lee el campo "Estado Envio" de un pedido. Devuelve null si falla. */
+async function getEstadoEnvio(recordId: string): Promise<string | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  if (!apiKey || !recordId) return null;
+  try {
+    const res = await fetch(
+      `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${TBL_PEDIDOS}/${recordId}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { fields?: Record<string, unknown> };
+    return (data.fields?.["Estado Envio"] as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Marca "Estado Envio" = "Enviado" en Airtable. Si falla, solo loguea. */
+async function marcarComoEnviado(recordId: string): Promise<void> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  if (!apiKey || !recordId) return;
+  try {
+    await fetch(
+      `${AIRTABLE_API}/${AIRTABLE_BASE_ID}/${TBL_PEDIDOS}/${recordId}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fields: { "Estado Envio": "Enviado" } }),
+      }
+    );
+  } catch (err) {
+    console.error("Error actualizando Estado Envio en Airtable:", err);
+  }
+}
 
 // ─── HTML del correo de despacho (reutilizado por GET y POST) ───────────────
 function buildEmailHtml(
@@ -130,56 +176,82 @@ function resultPage(ok: boolean, message: string, detail = ""): NextResponse {
 
 // ─── GET — llamado desde el botón de Airtable (abre URL en nueva pestaña) ───
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  try {
+    const { searchParams } = new URL(req.url);
 
-  const token     = searchParams.get("token") ?? "";
-  const email     = searchParams.get("email") ?? "";
-  const nombre    = searchParams.get("nombre") ?? "";
-  const idPedido  = searchParams.get("idPedido") ?? "";
-  const tracking  = searchParams.get("tracking") ?? "";
-  const productos = searchParams.get("productos") ?? "";
+    const token     = searchParams.get("token") ?? "";
+    const email     = searchParams.get("email") ?? "";
+    const nombre    = searchParams.get("nombre") ?? "";
+    const idPedido  = searchParams.get("idPedido") ?? "";
+    const tracking  = searchParams.get("tracking") ?? "";
+    const productos = searchParams.get("productos") ?? "";
+    const recordId  = searchParams.get("recordId") ?? "";
 
-  // Auth
-  if (!token || token !== API_SECRET) {
-    return resultPage(false, "No autorizado", "Token inválido.");
-  }
-  if (!process.env.RESEND_API_KEY) {
-    return resultPage(false, "Error de configuración", "RESEND_API_KEY no configurado en Vercel.");
-  }
-  if (!email || !nombre || !idPedido) {
+    // Auth
+    if (!token || token !== API_SECRET) {
+      return resultPage(false, "No autorizado", "Token inválido.");
+    }
+    if (!process.env.RESEND_API_KEY) {
+      return resultPage(false, "Error de configuración", "RESEND_API_KEY no configurado en Vercel.");
+    }
+    if (!email || !nombre || !idPedido) {
+      return resultPage(
+        false,
+        "Faltan datos",
+        "El pedido no tiene email, nombre o ID. Verifica los campos en Airtable."
+      );
+    }
+
+    // ── Protección anti doble-despacho ─────────────────────────────────────
+    // Si tenemos el recordId, consultamos Airtable antes de enviar.
+    // Si el pedido ya fue marcado como "Enviado", bloqueamos — el correo no sale.
+    if (recordId) {
+      const estadoActual = await getEstadoEnvio(recordId);
+      if (estadoActual === "Enviado") {
+        return resultPage(
+          false,
+          "Ya despachado",
+          `El pedido ${idPedido} ya recibió su notificación de envío. Para reenviar, cambia "Estado Envio" a Pendiente en Airtable.`
+        );
+      }
+    }
+
+    const html = buildEmailHtml(nombre, idPedido, tracking, productos);
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from:    REMITENTE,
+      to:      [email],
+      cc:      [ADMIN_CC],
+      replyTo: REPLY_TO,
+      subject: `Tu pedido DOSIS ${idPedido} fue enviado 🚀`,
+      html,
+    });
+
+    if (error) {
+      console.error("Error Resend (notificar-envio GET):", error);
+      return resultPage(
+        false,
+        "Error al enviar",
+        (error as { message?: string }).message ?? "Error desconocido de Resend."
+      );
+    }
+
+    // ── Marcar como Enviado en Airtable (fire-and-forget) ───────────────────
+    // Si este PATCH falla, el correo ya salió — no bloqueamos la respuesta.
+    if (recordId) {
+      await marcarComoEnviado(recordId);
+    }
+
     return resultPage(
-      false,
-      "Faltan datos",
-      "El pedido no tiene email, nombre o ID. Verifica los campos en Airtable."
+      true,
+      "Correo enviado",
+      `Notificación de despacho enviada a ${email}${tracking ? ` · Tracking: ${tracking}` : ""}`
     );
+  } catch (err) {
+    console.error("Error inesperado en notificar-envio GET:", err);
+    return resultPage(false, "Error interno", "Ocurrió un error inesperado. Intenta de nuevo.");
   }
-
-  const html = buildEmailHtml(nombre, idPedido, tracking, productos);
-
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const { data, error } = await resend.emails.send({
-    from:    REMITENTE,
-    to:      [email],
-    cc:      [ADMIN_CC],
-    replyTo: REPLY_TO,
-    subject: `Tu pedido DOSIS ${idPedido} fue enviado 🚀`,
-    html,
-  });
-
-  if (error) {
-    console.error("Error Resend (notificar-envio GET):", error);
-    return resultPage(
-      false,
-      "Error al enviar",
-      (error as { message?: string }).message ?? "Error desconocido de Resend."
-    );
-  }
-
-  return resultPage(
-    true,
-    "Correo enviado",
-    `Notificación de despacho enviada a ${email}${tracking ? ` · Tracking: ${tracking}` : ""}`
-  );
 }
 
 // ─── POST — llamado desde scripts o integraciones con Bearer token ────────────
@@ -203,7 +275,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { email, nombre, idPedido, productos, tracking } = body;
+    const { email, nombre, idPedido, productos, tracking, recordId } = body;
 
     // Validar campos mínimos
     if (!email || !nombre || !idPedido) {
@@ -211,6 +283,17 @@ export async function POST(req: NextRequest) {
         { ok: false, error: "Faltan campos: email, nombre, idPedido" },
         { status: 400 }
       );
+    }
+
+    // Protección anti doble-despacho (POST también)
+    if (recordId) {
+      const estadoActual = await getEstadoEnvio(recordId);
+      if (estadoActual === "Enviado") {
+        return NextResponse.json(
+          { ok: false, error: "Ya despachado", idPedido },
+          { status: 409 }
+        );
+      }
     }
 
     const html = buildEmailHtml(nombre, idPedido, tracking ?? "", productos ?? "");
@@ -231,6 +314,10 @@ export async function POST(req: NextRequest) {
         { ok: false, error: (error as { message?: string }).message || "Error enviando email" },
         { status: 500 }
       );
+    }
+
+    if (recordId) {
+      await marcarComoEnviado(recordId);
     }
 
     return NextResponse.json({ ok: true, emailId: data?.id });
