@@ -237,63 +237,67 @@ export async function POST(req: NextRequest) {
     const emailClienteValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente);
 
     if (emailClienteValido) {
+      const itemsHtmlCliente = (items as { nombre: string; qty: number; subtotal: number }[])
+        .map(
+          (i) =>
+            `<tr>
+              <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#374151;">${i.nombre}</td>
+              <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:#6b7280;">${i.qty}</td>
+              <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#374151;">$${i.subtotal}</td>
+            </tr>`
+        )
+        .join("");
+
       const htmlCliente = `
-        <div style="background:#0a0a0a;color:#e5e0d8;font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
-          <h1 style="font-size:28px;letter-spacing:0.2em;color:#DC2626;margin:0 0 4px;">DOSIS</h1>
-          <p style="color:#555;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;margin:0 0 28px;">Confirmación de pedido · C18H27NO3</p>
+        <div style="background:#f9fafb;font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
+          <div style="background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
 
-          <p style="color:#e5e0d8;font-size:15px;line-height:1.6;margin:0 0 16px;">
-            Hola <strong>${form.nombre}</strong>,
-          </p>
-          <p style="color:#aaa;font-size:14px;line-height:1.7;margin:0 0 24px;">
-            Recibimos tu pedido correctamente. En las próximas horas te escribimos por WhatsApp al
-            <strong style="color:#e5e0d8;">${form.telefono}</strong> para confirmar los detalles de la entrega.
-          </p>
+            <div style="background:#DC2626;padding:20px 28px;">
+              <p style="color:#fff;font-size:22px;font-weight:bold;letter-spacing:0.15em;margin:0;">DOSIS</p>
+            </div>
 
-          <p style="color:#555;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;margin:24px 0 8px;">Resumen del pedido</p>
-          <table style="width:100%;border-collapse:collapse;border:1px solid #292524;margin-bottom:16px;">
-            <thead>
-              <tr style="background:#1c1917;">
-                <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#666;">Producto</th>
-                <th style="padding:10px 12px;text-align:center;font-size:11px;color:#666;">Cant.</th>
-                <th style="padding:10px 12px;text-align:right;font-size:11px;color:#666;">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>${itemsHtml}</tbody>
-            <tfoot>
-              <tr style="background:#1c1917;">
-                <td colspan="2" style="padding:12px;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#555;">Total</td>
-                <td style="padding:12px;text-align:right;font-size:22px;font-weight:bold;color:#DC2626;">$${total}</td>
-              </tr>
-            </tfoot>
-          </table>
+            <div style="padding:28px;">
+              <p style="color:#111827;font-size:16px;margin:0 0 8px;">Hola <strong>${form.nombre}</strong>,</p>
+              <p style="color:#4b5563;font-size:14px;line-height:1.7;margin:0 0 24px;">
+                Recibimos tu pedido. Te contactamos por WhatsApp al <strong>${form.telefono}</strong>
+                en las próximas horas para coordinar la entrega.
+              </p>
 
-          <div style="border:1px solid #292524;padding:16px;margin-bottom:24px;background:#111;">
-            <p style="margin:5px 0;color:#aaa;font-size:13px;"><strong style="color:#eee;">Entrega:</strong> ${deliveryLabel}</p>
-            <p style="margin:5px 0;color:#aaa;font-size:13px;"><strong style="color:#eee;">Dirección:</strong> ${form.direccion}, ${form.ciudad}</p>
-            <p style="margin:5px 0;color:#aaa;font-size:13px;"><strong style="color:#eee;">Método de pago:</strong> ${paymentLabel}</p>
+              <p style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px;font-weight:600;">Resumen</p>
+              <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:20px;">
+                <thead>
+                  <tr style="background:#f3f4f6;">
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;">Producto</th>
+                    <th style="padding:10px 12px;text-align:center;font-size:11px;color:#6b7280;font-weight:600;">Cant.</th>
+                    <th style="padding:10px 12px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>${itemsHtmlCliente}</tbody>
+                <tfoot>
+                  <tr style="background:#f3f4f6;">
+                    <td colspan="2" style="padding:12px;font-size:12px;color:#6b7280;font-weight:600;">Total</td>
+                    <td style="padding:12px;text-align:right;font-size:18px;font-weight:bold;color:#DC2626;">$${total}</td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px;margin-bottom:20px;">
+                <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Entrega:</strong> ${deliveryLabel}</p>
+                <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Dirección:</strong> ${form.direccion}, ${form.ciudad}</p>
+                <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Pago:</strong> ${paymentLabel}</p>
+              </div>
+
+              <p style="color:#4b5563;font-size:13px;line-height:1.7;margin:0 0 4px;">
+                ¿Tienes dudas? Escríbenos al WhatsApp
+                <a href="https://wa.me/584142624078" style="color:#DC2626;text-decoration:none;">+58 414-262-4078</a>.
+              </p>
+            </div>
+
+            <div style="background:#f3f4f6;padding:14px 28px;border-top:1px solid #e5e7eb;">
+              <p style="color:#9ca3af;font-size:11px;margin:0;">DOSIS Picante · Venezuela</p>
+            </div>
+
           </div>
-
-          <p style="color:#555;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;margin:24px 0 8px;">¿Qué sigue?</p>
-          <ol style="color:#aaa;font-size:13px;line-height:1.8;padding-left:20px;margin:0 0 24px;">
-            <li>Verificamos tu comprobante.</li>
-            <li>Te contactamos por WhatsApp para confirmar.</li>
-            <li>Coordinamos la entrega.</li>
-          </ol>
-
-          <p style="color:#aaa;font-size:13px;line-height:1.7;margin:24px 0 8px;">
-            Si tienes alguna duda, responde este correo o escríbenos al WhatsApp
-            <a href="https://wa.me/584142624078" style="color:#DC2626;text-decoration:none;">+58 414-262-4078</a>.
-          </p>
-
-          <p style="color:#e5e0d8;font-size:14px;margin:24px 0 0;">
-            Gracias por elegir DOSIS. El picor está en camino.<br>
-            <strong style="letter-spacing:0.1em;">— DOSIS</strong>
-          </p>
-
-          <p style="color:#333;font-size:10px;margin-top:32px;letter-spacing:0.3em;text-transform:uppercase;border-top:1px solid #292524;padding-top:16px;">
-            DOSIS · C18H27NO3 · Venezuela
-          </p>
         </div>
       `;
 
