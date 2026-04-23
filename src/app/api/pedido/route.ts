@@ -302,7 +302,7 @@ export async function POST(req: NextRequest) {
       `;
 
       const destinoComprador = emailCliente;
-      const asuntoComprador = `Confirmación de tu pedido DOSIS — $${total}`;
+      const asuntoComprador = `🌶 Confirmación de tu pedido DOSIS — $${total}`;
 
       logDebug(`Enviando confirmación al cliente (${destinoComprador})...`);
       const { data: clienteData, error: clienteError } = await resend.emails.send({
