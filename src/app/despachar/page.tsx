@@ -83,14 +83,31 @@ function PantallaAcceso({
   );
 }
 
-// ─── KPI card ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+// ─── KPI card (clickable) ─────────────────────────────────────────────────────
+function KpiCard({
+  label, value, sub, accent, active, onClick,
+}: {
+  label: string; value: string; sub?: string; accent?: boolean;
+  active?: boolean; onClick?: () => void;
+}) {
   return (
-    <div className="bg-[#111] border border-[#292524] p-4 flex-1 min-w-[130px]">
-      <p className="text-[#555] text-[9px] tracking-[0.3em] uppercase mb-2">{label}</p>
-      <p className={`text-2xl font-bold ${accent ? "text-rojo" : "text-[#e5e0d8]"}`}>{value}</p>
-      {sub && <p className="text-[#555] text-xs mt-1">{sub}</p>}
-    </div>
+    <button
+      onClick={onClick}
+      className={`text-left p-4 flex-1 min-w-[130px] border transition-colors ${
+        active
+          ? "bg-rojo border-rojo"
+          : "bg-[#111] border-[#292524] hover:border-[#444]"
+      }`}
+    >
+      <p className={`text-[9px] tracking-[0.3em] uppercase mb-2 ${active ? "text-red-200" : "text-[#555]"}`}>{label}</p>
+      <p className={`text-2xl font-bold ${active ? "text-white" : accent ? "text-rojo" : "text-[#e5e0d8]"}`}>{value}</p>
+      {sub && <p className={`text-xs mt-1 ${active ? "text-red-200" : "text-[#555]"}`}>{sub}</p>}
+      {onClick && (
+        <p className={`text-[9px] mt-2 ${active ? "text-red-200" : "text-[#333]"}`}>
+          {active ? "▲ cerrar" : "▼ ver detalle"}
+        </p>
+      )}
+    </button>
   );
 }
 
@@ -272,86 +289,186 @@ function TarjetaPedido({
   );
 }
 
-// ─── Sección KPIs + Productos ──────────────────────────────────────────────────
+// ─── Sección KPIs expandibles ─────────────────────────────────────────────────
 function ResumenSection({ pedidos }: { pedidos: Pedido[] }) {
-  const [abierto, setAbierto] = useState(true);
+  const [activo, setActivo] = useState<string | null>(null);
+
+  const toggle = (id: string) => setActivo((prev) => (prev === id ? null : id));
 
   const kpis = useMemo(() => {
     const totalVentas = pedidos.reduce((s, p) => s + p.totalUSD, 0);
-    const esteMes = pedidos.filter((p) => esMesActual(p.fecha));
-    const ventasMes = esteMes.reduce((s, p) => s + p.totalUSD, 0);
-    const pendientesDespacho = pedidos.filter((p) => p.estadoEnvio !== "Enviado").length;
-    const pagosPendientes = pedidos.filter((p) => p.estadoPago !== "Confirmado").length;
-    const totalPedidos = pedidos.length;
+    const pedidosMes = pedidos.filter((p) => esMesActual(p.fecha));
+    const ventasMes = pedidosMes.reduce((s, p) => s + p.totalUSD, 0);
+    const sinDespachar = pedidos.filter((p) => p.estadoEnvio !== "Enviado");
+    const cobroPendiente = pedidos.filter((p) => p.estadoPago !== "Confirmado");
 
-    // Productos: agrupar por nombre
+    // Ventas por mes (últimos 6 meses)
+    const mesesMap = new Map<string, { pedidos: number; total: number }>();
+    for (const p of pedidos) {
+      if (!p.fecha) continue;
+      const d = new Date(p.fecha);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("es-VE", { month: "short", year: "numeric" });
+      const prev = mesesMap.get(key) || { pedidos: 0, total: 0 };
+      mesesMap.set(key, { pedidos: prev.pedidos + 1, total: prev.total + p.totalUSD });
+      // store label too
+      (mesesMap.get(key) as Record<string, unknown>)["label"] = label;
+    }
+    const meses = Array.from(mesesMap.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .slice(0, 6)
+      .map(([, v]) => v as { pedidos: number; total: number; label: string });
+
+    // Ventas por producto
     const prodMap = new Map<string, { unidades: number; ingresos: number }>();
     for (const p of pedidos) {
       for (const item of parseItems(p.itemsJson)) {
         const prev = prodMap.get(item.nombre) || { unidades: 0, ingresos: 0 };
-        prodMap.set(item.nombre, {
-          unidades: prev.unidades + item.qty,
-          ingresos: prev.ingresos + item.subtotal,
-        });
+        prodMap.set(item.nombre, { unidades: prev.unidades + item.qty, ingresos: prev.ingresos + item.subtotal });
       }
     }
     const productos = Array.from(prodMap.entries())
       .map(([nombre, v]) => ({ nombre, ...v }))
       .sort((a, b) => b.ingresos - a.ingresos);
-
     const maxIngresos = productos[0]?.ingresos || 1;
 
-    return { totalVentas, ventasMes, pendientesDespacho, pagosPendientes, totalPedidos, productos, maxIngresos, esteMes: esteMes.length };
+    return {
+      totalVentas, ventasMes, meses, productos, maxIngresos,
+      totalPedidos: pedidos.length,
+      pedidosMesCnt: pedidosMes.length,
+      sinDespachar, cobroPendiente,
+    };
   }, [pedidos]);
+
+  // Panel de detalle según KPI activo
+  const renderDetalle = () => {
+    if (!activo) return null;
+
+    if (activo === "ventas") return (
+      <div className="bg-[#0d0d0d] border border-t-0 border-rojo p-4">
+        <p className="text-[#555] text-[9px] tracking-[0.3em] uppercase mb-3">Ventas por mes</p>
+        <div className="space-y-2 mb-4">
+          {kpis.meses.map((m, i) => (
+            <div key={i} className="flex justify-between items-center">
+              <span className="text-[#aaa] text-sm capitalize">{m.label}</span>
+              <div className="flex gap-4">
+                <span className="text-[#555] text-xs">{m.pedidos} pedidos</span>
+                <span className="text-rojo font-bold text-sm w-12 text-right">${m.total}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[#555] text-[9px] tracking-[0.3em] uppercase mb-3 border-t border-[#1c1917] pt-3">Por producto</p>
+        <div className="space-y-2">
+          {kpis.productos.map((prod) => (
+            <div key={prod.nombre}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[#e5e0d8] text-sm">{prod.nombre}</span>
+                <div className="flex gap-4">
+                  <span className="text-[#555] text-xs">{prod.unidades} uds</span>
+                  <span className="text-rojo font-bold text-sm w-12 text-right">${prod.ingresos}</span>
+                </div>
+              </div>
+              <div className="w-full bg-[#1c1917] h-1 overflow-hidden">
+                <div className="h-full bg-rojo" style={{ width: `${(prod.ingresos / kpis.maxIngresos) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
+    if (activo === "mes") return (
+      <div className="bg-[#0d0d0d] border border-t-0 border-[#292524] p-4">
+        <p className="text-[#555] text-[9px] tracking-[0.3em] uppercase mb-3">Pedidos este mes</p>
+        {pedidos.filter((p) => esMesActual(p.fecha)).length === 0
+          ? <p className="text-[#555] text-sm">Sin pedidos este mes</p>
+          : pedidos.filter((p) => esMesActual(p.fecha)).map((p) => (
+            <div key={p.recordId} className="flex justify-between items-center py-1.5 border-b border-[#1c1917] last:border-0">
+              <div>
+                <span className="text-rojo text-xs font-bold">{p.idPedido}</span>
+                <span className="text-[#aaa] text-xs ml-2">{p.nombre}</span>
+              </div>
+              <span className="text-[#e5e0d8] font-bold text-sm">${p.totalUSD}</span>
+            </div>
+          ))
+        }
+      </div>
+    );
+
+    if (activo === "despacho") return (
+      <div className="bg-[#0d0d0d] border border-t-0 border-rojo p-4">
+        <p className="text-[#555] text-[9px] tracking-[0.3em] uppercase mb-3">Sin despachar</p>
+        {kpis.sinDespachar.length === 0
+          ? <p className="text-green-400 text-sm">✅ Todo despachado</p>
+          : kpis.sinDespachar.map((p) => (
+            <div key={p.recordId} className="flex justify-between items-center py-1.5 border-b border-[#1c1917] last:border-0">
+              <div>
+                <span className="text-rojo text-xs font-bold">{p.idPedido}</span>
+                <span className="text-[#aaa] text-xs ml-2">{p.nombre || "—"}</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <span className="text-[#555] text-xs">{formatFecha(p.fecha).split(" ")[0]}</span>
+                <span className="text-[#e5e0d8] font-bold text-sm">${p.totalUSD}</span>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    );
+
+    if (activo === "cobro") return (
+      <div className="bg-[#0d0d0d] border border-t-0 border-rojo p-4">
+        <p className="text-[#555] text-[9px] tracking-[0.3em] uppercase mb-3">Pagos sin confirmar</p>
+        {kpis.cobroPendiente.length === 0
+          ? <p className="text-green-400 text-sm">✅ Todos los pagos confirmados</p>
+          : kpis.cobroPendiente.map((p) => (
+            <div key={p.recordId} className="flex justify-between items-center py-1.5 border-b border-[#1c1917] last:border-0">
+              <div>
+                <span className="text-rojo text-xs font-bold">{p.idPedido}</span>
+                <span className="text-[#aaa] text-xs ml-2">{p.nombre || "—"}</span>
+                <span className="text-[#555] text-xs ml-2">{p.metodoPago}</span>
+              </div>
+              <span className="text-yellow-400 font-bold text-sm">${p.totalUSD}</span>
+            </div>
+          ))
+        }
+      </div>
+    );
+
+    return null;
+  };
 
   return (
     <div className="mb-6">
-      <button
-        onClick={() => setAbierto(!abierto)}
-        className="w-full text-left flex items-center justify-between mb-3"
-      >
-        <span className="text-[#555] text-[9px] tracking-[0.3em] uppercase">Resumen y KPIs</span>
-        <span className="text-[#555] text-xs">{abierto ? "▲ ocultar" : "▼ mostrar"}</span>
-      </button>
+      <p className="text-[#555] text-[9px] tracking-[0.3em] uppercase mb-3">Resumen</p>
 
-      {abierto && (
-        <>
-          {/* KPI cards */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            <KpiCard label="Total ventas" value={`$${kpis.totalVentas.toFixed(0)}`} sub={`${kpis.totalPedidos} pedidos`} accent />
-            <KpiCard label="Este mes" value={`$${kpis.ventasMes.toFixed(0)}`} sub={`${kpis.esteMes} pedidos`} />
-            <KpiCard label="Sin despachar" value={String(kpis.pendientesDespacho)} sub="pendientes de envío" accent={kpis.pendientesDespacho > 0} />
-            <KpiCard label="Cobro pendiente" value={String(kpis.pagosPendientes)} sub="sin confirmar" accent={kpis.pagosPendientes > 0} />
-          </div>
+      {/* KPI grid */}
+      <div className="flex flex-wrap gap-0 mb-0 border border-[#292524]">
+        <KpiCard
+          label="Total ventas" value={`$${kpis.totalVentas.toFixed(0)}`}
+          sub={`${kpis.totalPedidos} pedidos totales`} accent
+          active={activo === "ventas"} onClick={() => toggle("ventas")}
+        />
+        <KpiCard
+          label="Este mes" value={`$${kpis.ventasMes.toFixed(0)}`}
+          sub={`${kpis.pedidosMesCnt} pedidos`}
+          active={activo === "mes"} onClick={() => toggle("mes")}
+        />
+        <KpiCard
+          label="Sin despachar" value={String(kpis.sinDespachar.length)}
+          sub="pendientes de envío" accent={kpis.sinDespachar.length > 0}
+          active={activo === "despacho"} onClick={() => toggle("despacho")}
+        />
+        <KpiCard
+          label="Cobro pendiente" value={String(kpis.cobroPendiente.length)}
+          sub="sin confirmar" accent={kpis.cobroPendiente.length > 0}
+          active={activo === "cobro"} onClick={() => toggle("cobro")}
+        />
+      </div>
 
-          {/* Breakdown por producto */}
-          {kpis.productos.length > 0 && (
-            <div className="bg-[#111] border border-[#292524] p-4">
-              <p className="text-[#555] text-[9px] tracking-[0.3em] uppercase mb-3">Ventas por producto</p>
-              <div className="space-y-3">
-                {kpis.productos.map((prod) => (
-                  <div key={prod.nombre}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[#e5e0d8] text-sm font-medium">{prod.nombre}</span>
-                      <div className="flex gap-4 text-right">
-                        <span className="text-[#555] text-xs">{prod.unidades} uds</span>
-                        <span className="text-rojo font-bold text-sm w-14 text-right">${prod.ingresos}</span>
-                      </div>
-                    </div>
-                    {/* Barra de progreso */}
-                    <div className="w-full bg-[#1c1917] h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-rojo rounded-full"
-                        style={{ width: `${(prod.ingresos / kpis.maxIngresos) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      {/* Panel de detalle */}
+      {renderDetalle()}
     </div>
   );
 }
