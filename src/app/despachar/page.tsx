@@ -108,7 +108,7 @@ function TarjetaPedido({
   const [msgError, setMsgError] = useState("");
   const items = parseItems(pedido.itemsJson);
 
-  const pagoConfirmado = pedido.estadoPago === "Recibido";
+  const pagoConfirmado = pedido.estadoPago === "Confirmado";
   const despachado = pedido.estadoEnvio === "Enviado";
 
   // Confirmar pago
@@ -118,12 +118,12 @@ function TarjetaPedido({
       const res = await fetch("/api/admin/pedidos", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ recordId: pedido.recordId, fields: { "Estado Pago": "Recibido" } }),
+        body: JSON.stringify({ recordId: pedido.recordId, fields: { "Estado Pago": "Confirmado" } }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (data.ok) {
         setEstadoPagoLocal("ok");
-        onUpdate(pedido.recordId, { estadoPago: "Recibido" });
+        onUpdate(pedido.recordId, { estadoPago: "Confirmado" });
       } else {
         setEstadoPagoLocal("error");
         setMsgError(data.error || "Error");
@@ -281,7 +281,7 @@ function ResumenSection({ pedidos }: { pedidos: Pedido[] }) {
     const esteMes = pedidos.filter((p) => esMesActual(p.fecha));
     const ventasMes = esteMes.reduce((s, p) => s + p.totalUSD, 0);
     const pendientesDespacho = pedidos.filter((p) => p.estadoEnvio !== "Enviado").length;
-    const pagosPendientes = pedidos.filter((p) => p.estadoPago !== "Recibido").length;
+    const pagosPendientes = pedidos.filter((p) => p.estadoPago !== "Confirmado").length;
     const totalPedidos = pedidos.length;
 
     // Productos: agrupar por nombre
