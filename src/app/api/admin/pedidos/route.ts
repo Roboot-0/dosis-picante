@@ -5,7 +5,6 @@ export const runtime = "nodejs";
 const AIRTABLE_API = "https://api.airtable.com/v0";
 const BASE_ID = process.env.AIRTABLE_BASE_ID || "appxJuRghB7SNB5md";
 const TBL_PEDIDOS = "tbl3YXihFUiElzG05";
-const TBL_CLIENTES = "tblWZb7RXfbsX3a0c";
 
 const API_SECRET = process.env.NOTIFICACION_SECRET || process.env.RESEND_API_KEY;
 
@@ -43,45 +42,20 @@ export async function GET(req: NextRequest) {
     const pedidosData = (await pedidosRes.json()) as { records: AirtableRecord[] };
     const pedidos = pedidosData.records;
 
-    const clienteIds = Array.from(
-      new Set(pedidos.flatMap((p) => (p.fields.Cliente as string[]) || []))
-    );
-
-    const clienteMap = new Map<string, { nombre: string; email: string; telefono: string }>();
-
-    if (clienteIds.length > 0) {
-      const formula = `OR(${clienteIds.map((id) => `RECORD_ID()="${id}"`).join(",")})`;
-      const clientesUrl =
-        `${AIRTABLE_API}/${BASE_ID}/${TBL_CLIENTES}` +
-        `?filterByFormula=${encodeURIComponent(formula)}` +
-        `&fields[]=Nombre&fields[]=Email&fields[]=Telefono`;
-
-      const clientesRes = await fetch(clientesUrl, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-
-      if (clientesRes.ok) {
-        const clientesData = (await clientesRes.json()) as { records: AirtableRecord[] };
-        for (const c of clientesData.records) {
-          clienteMap.set(c.id, {
-            nombre: (c.fields.Nombre as string) || "",
-            email: (c.fields.Email as string) || "",
-            telefono: (c.fields.Telefono as string) || "",
-          });
-        }
-      }
-    }
-
+    // Los campos lookup "Nombre (from Cliente)" y "Email (from Cliente)" ya vienen
+    // en la respuesta de Pedidos — no hace falta una segunda llamada a Clientes.
     const result = pedidos.map((p) => {
-      const clienteId = ((p.fields.Cliente as string[]) || [])[0];
-      const cliente = clienteMap.get(clienteId) || { nombre: "", email: "", telefono: "" };
+      const nombreRaw = p.fields["Nombre (from Cliente)"];
+      const emailRaw  = p.fields["Email (from Cliente)"];
+      const nombre = Array.isArray(nombreRaw) ? (nombreRaw[0] as string) : ((nombreRaw as string) || "");
+      const email  = Array.isArray(emailRaw)  ? (emailRaw[0]  as string) : ((emailRaw  as string) || "");
       return {
         recordId: p.id,
         idPedido: (p.fields["ID Pedido"] as string) || "",
         fecha: (p.fields.Fecha as string) || "",
-        nombre: cliente.nombre,
-        email: cliente.email,
-        telefono: cliente.telefono,
+        nombre,
+        email,
+        telefono: "",
         itemsJson: (p.fields["Items JSON"] as string) || "[]",
         totalUSD: (p.fields["Total USD"] as number) || 0,
         metodoPago: (p.fields["Metodo Pago"] as string) || "",
