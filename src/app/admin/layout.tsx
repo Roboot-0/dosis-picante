@@ -10,6 +10,7 @@ import {
   Receipt,
   FlaskConical,
   Leaf,
+  DollarSign,
   LogOut,
   Menu,
   X,
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/admin/gastos", label: "Gastos", icon: Receipt },
   { href: "/admin/produccion", label: "Producción", icon: FlaskConical },
   { href: "/admin/ingredientes", label: "Ingredientes", icon: Leaf },
+  { href: "/admin/finanzas", label: "Finanzas & P&L", icon: DollarSign },
 ];
 
 function NavItem({
