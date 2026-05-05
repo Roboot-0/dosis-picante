@@ -9,6 +9,7 @@ import {
   Users,
   Receipt,
   FlaskConical,
+  Leaf,
   LogOut,
   Menu,
   X,
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/admin/clientes", label: "Clientes", icon: Users },
   { href: "/admin/gastos", label: "Gastos", icon: Receipt },
   { href: "/admin/produccion", label: "Producción", icon: FlaskConical },
+  { href: "/admin/ingredientes", label: "Ingredientes", icon: Leaf },
 ];
 
 function NavItem({
