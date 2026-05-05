@@ -81,14 +81,13 @@ export default function AdminLayout({
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-6 border-b border-[#292524]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-[#DC2626] rounded-xl flex items-center justify-center text-lg">
-            🌶️
-          </div>
-          <div>
-            <p className="font-bebas text-[#FAFAF9] text-xl tracking-wider leading-none">
-              DOSIS
-            </p>
-            <p className="text-[#57534E] text-[10px]">Admin</p>
+          <div className="flex flex-col">
+            <img
+              src="/images/logo-transparent.png"
+              alt="DOSIS Picante"
+              className="h-7 w-auto"
+            />
+            <p className="text-[#57534E] text-[10px] mt-0.5 ml-0.5">Admin</p>
           </div>
         </div>
         {onClose && (
