@@ -40,12 +40,11 @@ export default function AdminLogin() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#DC2626] mb-4">
-            <span className="text-2xl">🌶️</span>
-          </div>
-          <h1 className="font-bebas text-4xl text-[#FAFAF9] tracking-wider">
-            DOSIS
-          </h1>
+          <img
+            src="/images/logo-transparent.png"
+            alt="DOSIS Picante"
+            className="h-20 w-auto mx-auto mb-4"
+          />
           <p className="text-[#A8A29E] text-sm mt-1">Panel Administrativo</p>
         </div>
 
