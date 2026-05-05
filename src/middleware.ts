@@ -10,7 +10,9 @@ export async function middleware(req: NextRequest) {
   const isAdminApi = pathname.startsWith("/api/admin");
 
   if (!isAdminPage && !isAdminApi) return NextResponse.next();
+  // Rutas públicas del sistema admin (no requieren sesión)
   if (pathname === "/admin/login") return NextResponse.next();
+  if (pathname === "/api/admin/auth") return NextResponse.next();
 
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) {

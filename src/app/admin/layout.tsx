@@ -66,6 +66,11 @@ export default function AdminLayout({
     router.refresh();
   }
 
+  // Login page: render sin sidebar
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
+
   function isActive(item: (typeof NAV)[0]) {
     if (item.exact) return pathname === item.href;
     return pathname.startsWith(item.href);
