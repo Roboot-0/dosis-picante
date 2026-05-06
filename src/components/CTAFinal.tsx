@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import MoleculaFondo from "@/components/MoleculaFondo";
 
 export default function CTAFinal() {
   const ref = useRef(null);
@@ -18,7 +19,8 @@ export default function CTAFinal() {
         }}
       />
 
-      {/* Patrón molecular decorativo */}
+      {/* Molécula de fondo animada */}
+      <MoleculaFondo opacity={0.06} color="#A8A29E" scale={1.2} />
       <div className="absolute top-0 left-0 right-0 h-px linea-fuego" />
       <div className="absolute bottom-0 left-0 right-0 h-px linea-fuego" />
 
@@ -63,8 +65,8 @@ export default function CTAFinal() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="text-lg text-crema/60 font-sans font-300 mb-12 max-w-lg mx-auto leading-relaxed"
         >
-          Haz tu pedido en menos de dos minutos. Te contamos qué
-          salsa es para ti, la preparamos y te la llevamos.
+          Elige tu salsa y te la llevamos
+          a donde estés.
         </motion.p>
 
         <motion.div
@@ -106,7 +108,7 @@ export default function CTAFinal() {
           transition={{ duration: 1, delay: 0.8 }}
           className="mt-20 text-xs tracking-[0.4em] text-crema/20 font-sans uppercase"
         >
-          C18H27NO3 — Capsaicina. La razón de todo.
+                    C₁₈H₂₇NO₃ — Caracas, Venezuela
         </motion.p>
       </div>
     </section>

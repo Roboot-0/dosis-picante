@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer className="bg-carbon border-t border-carbon-medio py-12">
@@ -7,9 +9,9 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Logo texto */}
           <div>
-            <p className="font-bebas text-2xl tracking-[0.3em] text-crema">
+            <Link href="/" className="font-bebas text-2xl tracking-[0.3em] text-crema hover:text-rojo transition-colors">
               DOSIS
-            </p>
+            </Link>
             <p className="text-xs text-crema/30 font-mono tracking-widest mt-1">
               Experimenta El Picor
             </p>
@@ -18,24 +20,24 @@ export default function Footer() {
           {/* Links */}
           <nav className="flex gap-8">
             {[
-                  { label: "Historia", href: "#historia" },
-                  { label: "Salsas", href: "#productos" },
-                  { label: "Intensidad", href: "#intensidad" },
-                  { label: "Contacto", href: "#contacto" },
-                ].map(({ label, href }) => (
-              <a
-                key={label}
-                href={href}
+              { label: "Salsas", href: "/salsas" },
+              { label: "Historia", href: "/historia" },
+              { label: "Ciencia", href: "/ciencia" },
+              { label: "FAQ", href: "/faq" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
                 className="text-xs text-crema/40 hover:text-rojo transition-colors font-sans tracking-widest uppercase"
               >
-                {label}
-              </a>
+                {link.label}
+              </Link>
             ))}
           </nav>
 
           {/* Fórmula */}
           <p className="text-xs text-crema/20 font-sans tracking-widest">
-            C18H27NO3
+            C₁₈H₂₇NO₃
           </p>
         </div>
 
@@ -46,15 +48,21 @@ export default function Footer() {
             className="font-mono text-[10px] tracking-[0.3em] text-crema/30 hover:text-rojo transition-colors uppercase">
             @dosis_ve
           </a>
-          <a href="https://wa.me/584142624078" target="_blank" rel="noopener noreferrer"
+          <a href="https://wa.me/584241788803" target="_blank" rel="noopener noreferrer"
             className="font-mono text-[10px] tracking-[0.3em] text-crema/30 hover:text-rojo transition-colors uppercase">
             WhatsApp
           </a>
         </div>
 
-        <p className="text-center text-xs text-crema/20 font-sans">
-          © 2026 DOSIS · Todos los derechos reservados · Hecho en Caracas
-        </p>
+        <div className="flex justify-center items-center gap-4">
+          <p className="text-center text-xs text-crema/20 font-sans">
+            © 2026 DOSIS · Todos los derechos reservados · Hecho en Caracas
+          </p>
+          <span className="text-crema/10">·</span>
+          <Link href="/privacidad" className="text-xs text-crema/20 hover:text-crema/50 transition-colors font-sans">
+            Privacidad
+          </Link>
+        </div>
       </div>
     </footer>
   );

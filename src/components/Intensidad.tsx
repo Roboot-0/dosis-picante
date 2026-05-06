@@ -59,7 +59,7 @@ export default function Intensidad() {
     <section id="intensidad" className="py-32 bg-carbon relative overflow-hidden">
       {/* Fórmula watermark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.025] select-none">
-        <span className="font-bebas text-[18vw] text-crema tracking-widest">C18H27NO3</span>
+        <span className="font-bebas text-[18vw] text-crema tracking-widest">C₁₈H₂₇NO₃</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">

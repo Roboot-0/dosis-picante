@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -13,11 +17,16 @@ export default function Nav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Cerrar menú móvil al cambiar de página
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   const links = [
-    { label: "Historia", href: "#historia" },
-    { label: "Salsas", href: "#productos" },
-    { label: "Ciencia", href: "#ciencia" },
-    { label: "FAQ", href: "#faq" },
+    { label: "Salsas", href: "/salsas" },
+    { label: "Historia", href: "/historia" },
+    { label: "Ciencia", href: "/ciencia" },
+    { label: "FAQ", href: "/faq" },
   ];
 
   const openTienda = () => {
@@ -37,21 +46,33 @@ export default function Nav() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <a href="#" className="font-bebas text-2xl tracking-[0.3em] text-crema hover:text-rojo transition-colors">
-          DOSIS
-        </a>
+        {/* Logo — transparent PNG con filtro, sin blend mode (incompatible con backdrop-blur) */}
+        <Link href="/" className="flex items-center group">
+          <Image
+            src="/images/logo-transparent.png"
+            alt="DOSIS Picante"
+            width={1377}
+            height={768}
+            className="object-contain w-[120px] transition-all duration-300 group-hover:brightness-125"
+            style={{ filter: "brightness(1.25) saturate(1.6) drop-shadow(0 0 6px rgba(220,38,38,0.25))" }}
+            priority
+          />
+        </Link>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
           {links.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-sans font-600 tracking-wider text-crema/70 hover:text-rojo transition-colors uppercase"
+              className={`text-sm font-sans font-600 tracking-wider uppercase transition-colors ${
+                pathname === link.href
+                  ? "text-rojo"
+                  : "text-crema/70 hover:text-rojo"
+              }`}
             >
               {link.label}
-            </a>
+            </Link>
           ))}
           <button
             type="button"
@@ -90,14 +111,15 @@ export default function Nav() {
           >
             <div className="px-6 py-6 flex flex-col gap-4">
               {links.map((link) => (
-                <a
+                <Link
                   key={link.href}
                   href={link.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="font-bebas text-2xl tracking-widest text-crema hover:text-rojo transition-colors"
+                  className={`font-bebas text-2xl tracking-widest transition-colors ${
+                    pathname === link.href ? "text-rojo" : "text-crema hover:text-rojo"
+                  }`}
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
               <button
                 type="button"

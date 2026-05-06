@@ -17,7 +17,7 @@ const salsas = [
     ml: "50 ml",
     precio: 6,
     color: "#D97706",
-    imagen: "/images/microdosis.png",
+    imagen: "/images/microdosis-clean.png",
     lifestyle: "/images/uso-microdosis.jpg",
     tags: ["Habanero", "Ají dulce", "Frutal"],
     usos: ["Tacos y burritos", "Huevos y desayunos", "Carnes a la plancha", "Pastas y pizzas"],
@@ -34,7 +34,7 @@ const salsas = [
     ml: "50 ml",
     precio: 6,
     color: "#EA580C",
-    imagen: "/images/ahumadosis.png",
+    imagen: "/images/ahumadosis-clean.png",
     lifestyle: "/images/uso-ahumadosis.jpg",
     tags: ["Habanero", "Reaper ahumado", "Compleja"],
     usos: ["Parrillas y asados", "Hamburguesas gourmet", "Marinadas", "Sopas y guisos"],
@@ -51,7 +51,7 @@ const salsas = [
     ml: "30 ml",
     precio: 12,
     color: "#DC2626",
-    imagen: "/images/sobredosis.png",
+    imagen: "/images/sobredosis-clean.png",
     lifestyle: "/images/uso-sobredosis.jpg",
     tags: ["Carolina Reaper", "Trinidad Scorpion", "Extrema"],
     usos: ["Retos y experiencias", "Alitas picantes", "Salsas base", "Solo si lo mereces"],
@@ -148,12 +148,16 @@ export default function Productos() {
                   src={salsa.imagen}
                   alt={salsa.nombre}
                   fill
-                  className="object-contain p-4 group-hover:scale-105 transition-transform duration-700"
+                  className="object-contain p-8 group-hover:scale-105 transition-transform duration-700"
                   sizes="(max-width: 1024px) 100vw, 50vw"
+                />
+                {/* Gradiente: cubre sombra blanca del fondo de la botella + bordes */}
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{ background: "linear-gradient(to top, #1C1917 0%, #1C191799 18%, transparent 42%), radial-gradient(ellipse 80% 65% at 50% 40%, transparent 42%, #1C191780 70%, #1C1917 100%)" }}
                 />
                 {/* Número decorativo */}
                 <span
-                  className="absolute bottom-4 right-6 font-bebas text-8xl leading-none opacity-10 select-none"
+                  className="absolute bottom-4 right-6 font-bebas text-8xl leading-none opacity-10 select-none z-10"
                   style={{ color: salsa.color }}
                 >
                   {salsa.numero}
@@ -229,17 +233,11 @@ export default function Productos() {
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new Event("open-tienda"))}
-                  className="inline-flex items-center gap-3 w-fit text-sm font-sans font-600 tracking-widest uppercase transition-all duration-300 group/link cursor-pointer bg-transparent border-0 p-0"
-                  style={{ color: salsa.color }}
+                  className="w-full py-4 font-bebas text-xl tracking-[0.25em] uppercase transition-all duration-300 cursor-pointer border-0 text-crema hover:opacity-90"
+                  style={{ background: salsa.color, boxShadow: `0 0 30px ${salsa.color}40` }}
                 >
-                  Pedir esta salsa
-                  <span className="w-6 h-px group-hover/link:w-10 transition-all duration-300" style={{ background: salsa.color }} />
+                  Pedir {salsa.nombre} — ${salsa.precio}
                 </button>
-
-                <div
-                  className="h-px w-0 group-hover:w-full transition-all duration-700"
-                  style={{ background: `linear-gradient(90deg, ${salsa.color}, transparent)` }}
-                />
               </div>
             </motion.div>
           ))}
@@ -279,15 +277,19 @@ export default function Productos() {
             <div className="flex items-baseline gap-3">
               <span className="font-bebas text-5xl text-rojo leading-none">$22</span>
               <span className="font-mono text-xs text-crema/40 tracking-widest uppercase">
-                50+50+30 ml · ahorras $2
+                2 × 50 ml + 1 × 30 ml · ahorras $3
               </span>
             </div>
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("open-tienda"))}
-              className="inline-flex items-center gap-3 w-fit px-8 py-4 bg-rojo text-crema font-bebas text-lg tracking-[0.2em] uppercase hover:bg-rojo-oscuro transition-colors duration-300 border-0 cursor-pointer"
+              className="inline-flex items-center gap-3 w-fit px-8 py-4 bg-rojo text-crema font-bebas text-xl tracking-[0.2em] uppercase hover:bg-rojo-oscuro transition-colors duration-300 cursor-pointer border-0"
+              style={{ boxShadow: "0 0 30px #DC262635" }}
             >
-              Pedir el Kit
+              Pedir el Kit — $22
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
         </motion.div>

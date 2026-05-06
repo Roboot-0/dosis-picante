@@ -172,7 +172,7 @@ export interface CrearPedidoInput {
   totalUSD:     number;
   tasaBCV?:     number;
   totalBs?:     number;
-  metodoPago:   "Pago Móvil" | "Efectivo";
+  metodoPago:   "Pago Móvil" | "Zelle" | "Efectivo";
   direccionEnvio: string;
   notas?:       string;
 }
@@ -303,5 +303,34 @@ function normalizarTelefono(input: string): string | null {
   return limpio.startsWith("+") ? limpio : `+${d}`;
 }
 
-// Evitar "unused export" si cambia el import: marcar los IDs como internos exportables para tests manuales.
-export const _tablas = { TBL_PRODUCTOS, TBL_CLIENTES, TBL_PEDIDOS, TBL_SUSCRIPTORES };
+/**
+ * Incrementa el contador de usos de un cupón cuando se usa en un pedido.
+ * Fire-and-forget — si falla, no rompe el pedido.
+ */
+export async function incrementarUsosCupon(codigo: string): Promise<void> {
+  if (!codigo) return;
+  const { baseId } = envOrThrow();
+  const TBL_CUPONES = process.env.AIRTABLE_TBL_CUPONES;
+  if (!TBL_CUPONES) return;
+
+  try {
+    const formula = encodeURIComponent(`{Codigo} = "${codigo.replace(/"/g, '\\"')}"`);
+    const buscar = (await airtableFetch(
+      `/${baseId}/${TBL_CUPONES}?filterByFormula=${formula}&maxRecords=1`,
+      { method: "GET" },
+    )) as { records: Array<{ id: string; fields: { "Usos Actuales"?: number } }> };
+
+    if (buscar.records.length === 0) return;
+    const record = buscar.records[0];
+    const usosActuales = record.fields["Usos Actuales"] ?? 0;
+
+    await airtableFetch(`/${baseId}/${TBL_CUPONES}/${record.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ fields: { "Usos Actuales": usosActuales + 1 } }),
+    });
+  } catch {
+    // silencioso
+  }
+}
+
+// Evitar "unused expor

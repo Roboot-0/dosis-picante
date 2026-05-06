@@ -1,190 +1,232 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
-import { useRef, useState, useEffect } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import Image from "next/image";
+import { useRef } from "react";
 
-/* ──────────────────────────────────────────────────────
-   PLACEHOLDER — Reemplaza con testimonios reales.
-   Cada objeto: nombre, ciudad, texto, salsa (opcional).
-   ────────────────────────────────────────────────────── */
 const testimonios = [
   {
-    nombre: "Andrés M.",
-    ciudad: "Caracas",
-    texto:
-      "Le puse MICRODOSIS a unas arepas de pabellón y no había vuelta atrás. Ahora es fija en la mesa.",
+    id: "manuel",
+    nombre: "Manuel R.",
+    ciudad: "Maturín",
     salsa: "MICRODOSIS",
+    salsaColor: "#D97706",
+    quote:
+      "Llegó el kit con las tres. Empecé con la Microdosis en unos perritos y uff, le gustó a toda la familia. Ya vamos por la Ahumadosis.",
+    imagen: "/images/testimonio-manuel.jpg",
+    objectPosition: "12% 58%",
+    numero: "01",
   },
   {
-    nombre: "Valentina R.",
-    ciudad: "Valencia",
-    texto:
-      "AHUMADOSIS en la parrilla del domingo cambió todo. El ahumado llega primero, después el calor. Adictiva.",
-    salsa: "AHUMADOSIS",
-  },
-  {
-    nombre: "Carlos P.",
-    ciudad: "Maracaibo",
-    texto:
-      "Compré SOBREDOSIS de broma para un reto entre amigos. Ahora la uso en serio — dos gotas en una sopa y la transforma.",
-    salsa: "SOBREDOSIS",
-  },
-  {
-    nombre: "María G.",
+    id: "alejandro",
+    nombre: "Alejandro V.",
     ciudad: "Caracas",
-    texto:
-      "Pedí el Kit completo por curiosidad. Ya van tres pedidos y todavía no decido cuál es mi favorita.",
-    salsa: "KIT DOSIS",
+    salsa: "SOBREDOSIS",
+    salsaColor: "#DC2626",
+    quote:
+      "Dos gotas haciéndome el valiente. Le cambió la cara a la sopa y a mí también. No me arrepiento.",
+    imagen: "/images/testimonio-alejandro.jpg",
+    objectPosition: "18% 8%",
+    numero: "02",
+  },
+  {
+    id: "carlos",
+    nombre: "Carlos M.",
+    ciudad: "Caracas",
+    salsa: "AHUMADOSIS",
+    salsaColor: "#EA580C",
+    quote:
+      "La parrilla del domingo no es la misma desde que llegó la Ahumadosis. El ahumado se mete en la carne, el picante llega después. A mi familia le encanta.",
+    imagen: "/images/lifestyle-carne-ahumadosis.jpg",
+    objectPosition: "50% 5%",
+    numero: "03",
   },
 ];
 
-const colorPorSalsa: Record<string, string> = {
-  MICRODOSIS: "#D97706",
-  AHUMADOSIS: "#EA580C",
-  SOBREDOSIS: "#DC2626",
-  "KIT DOSIS": "#DC2626",
-};
-
 export default function Testimonios() {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
-
-  /* Autoplay en móvil — carrusel automático cada 5s */
-  const [active, setActive] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActive((prev) => (prev + 1) % testimonios.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  const containerRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"],
+  });
+  const headerY = useTransform(scrollYProgress, [0, 0.4], [50, 0]);
+  const headerOpacity = useTransform(scrollYProgress, [0, 0.3], [0, 1]);
 
   return (
-    <section className="py-28 bg-carbon relative overflow-hidden">
-      {/* Línea superior */}
+    <section
+      id="testimonios"
+      ref={containerRef}
+      className="py-32 bg-carbon-claro overflow-hidden relative"
+    >
+      {/* Línea decorativa superior */}
       <div className="absolute top-0 left-0 right-0 h-px linea-fuego" />
 
-      <div ref={ref} className="max-w-5xl mx-auto px-6">
+      {/* Número decorativo de fondo */}
+      <div
+        className="absolute -top-4 right-8 font-bebas text-[22vw] leading-none text-crema/[0.025] select-none pointer-events-none"
+        aria-hidden="true"
+      >
+        REAL
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-4 mb-6"
+          style={{ y: headerY, opacity: headerOpacity }}
+          className="mb-20"
         >
-          <div className="h-px w-8 bg-rojo" />
-          <span className="text-xs tracking-[0.4em] text-rojo uppercase font-sans font-600">
-            Quienes Probaron
-          </span>
+          <div className="flex items-center gap-4 mb-5">
+            <div className="h-px w-8 bg-rojo" />
+            <span className="text-xs tracking-[0.4em] text-rojo uppercase font-sans font-600">
+              Los que ya saben
+            </span>
+          </div>
+          <h2 className="font-bebas text-[clamp(2.8rem,6vw,4.5rem)] leading-none text-crema">
+            LO QUE DICE
+            <br />
+            <span className="text-rojo">LA GENTE.</span>
+          </h2>
         </motion.div>
 
-        <motion.h2
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7, delay: 0.1 }}
-          className="font-bebas text-[clamp(2.5rem,6vw,4.5rem)] leading-none text-crema mb-14"
-        >
-          LO QUE DICEN <span className="text-rojo">LOS QUE SABEN.</span>
-        </motion.h2>
-
-        {/* Grid desktop / Carrusel mobile */}
-        <div className="hidden md:grid md:grid-cols-2 gap-6">
+        {/* Testimonios grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {testimonios.map((t, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.15 * i }}
-              className="border border-carbon-medio p-8 relative group hover:border-rojo/30 transition-colors duration-500"
-            >
-              {/* Comillas decorativas */}
-              <span
-                className="absolute top-4 right-6 font-bebas text-6xl leading-none opacity-10 select-none"
-                style={{ color: colorPorSalsa[t.salsa] || "#DC2626" }}
-              >
-                &ldquo;
-              </span>
-
-              <p className="text-crema/70 font-sans font-300 leading-relaxed mb-6 text-base relative z-10">
-                &ldquo;{t.texto}&rdquo;
-              </p>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-crema font-sans font-600 text-sm">{t.nombre}</p>
-                  <p className="text-crema/30 font-mono text-xs">{t.ciudad}</p>
-                </div>
-                {t.salsa && (
-                  <span
-                    className="font-mono text-[10px] tracking-[0.2em] px-3 py-1 border uppercase"
-                    style={{
-                      color: colorPorSalsa[t.salsa] || "#DC2626",
-                      borderColor: `${colorPorSalsa[t.salsa] || "#DC2626"}33`,
-                    }}
-                  >
-                    {t.salsa}
-                  </span>
-                )}
-              </div>
-            </motion.div>
+            <TestimonioCard key={t.id} testimonio={t} index={i} />
           ))}
         </div>
 
-        {/* Mobile: un testimonio a la vez + dots */}
-        <div className="md:hidden">
-          <motion.div
-            key={active}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="border border-carbon-medio p-8 relative"
+        {/* Firma inferior */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+          className="mt-16 text-center text-xs tracking-[0.4em] text-crema/25 font-mono uppercase"
+        >
+          Clientes reales. Sin filtros. Sin guiones.
+        </motion.p>
+      </div>
+
+      {/* Línea decorativa inferior */}
+      <div className="absolute bottom-0 left-0 right-0 h-px linea-fuego" />
+    </section>
+  );
+}
+
+function TestimonioCard({
+  testimonio: t,
+  index,
+}: {
+  testimonio: (typeof testimonios)[0];
+  index: number;
+}) {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const imgY = useTransform(scrollYProgress, [0, 1], ["6%", "-6%"]);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 60 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{
+        duration: 0.7,
+        delay: index * 0.15,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+      className="group relative bg-carbon overflow-hidden"
+    >
+      {/* Foto con parallax */}
+      <div className="relative h-[320px] sm:h-[380px] overflow-hidden">
+        <motion.div
+          style={{ y: imgY }}
+          className="absolute inset-[-6%] w-[112%] h-[112%]"
+        >
+          <Image
+            src={t.imagen}
+            alt={`${t.nombre} usando DOSIS ${t.salsa}`}
+            fill
+            className="object-cover transition-transform duration-700 ease-out"
+            style={{ objectPosition: t.objectPosition }}
+            sizes="(max-width: 1024px) 100vw, 50vw"
+          />
+        </motion.div>
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-carbon via-carbon/50 to-carbon/10 z-10" />
+
+        {/* Badge de salsa */}
+        <div className="absolute top-5 left-5 z-20">
+          <motion.span
+            initial={{ opacity: 0, x: -10 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.15 + 0.3 }}
+            className="font-mono text-[9px] tracking-[0.3em] uppercase px-3 py-1.5 border"
+            style={{
+              color: t.salsaColor,
+              borderColor: `${t.salsaColor}60`,
+              background: `${t.salsaColor}18`,
+            }}
           >
-            <span
-              className="absolute top-4 right-6 font-bebas text-6xl leading-none opacity-10 select-none"
-              style={{ color: colorPorSalsa[testimonios[active].salsa] || "#DC2626" }}
-            >
-              &ldquo;
-            </span>
+            {t.salsa}
+          </motion.span>
+        </div>
 
-            <p className="text-crema/70 font-sans font-300 leading-relaxed mb-6 text-base relative z-10">
-              &ldquo;{testimonios[active].texto}&rdquo;
+        {/* Número decorativo */}
+        <span
+          className="absolute top-4 right-5 font-bebas text-6xl leading-none opacity-15 select-none z-10"
+          style={{ color: t.salsaColor }}
+          aria-hidden="true"
+        >
+          {t.numero}
+        </span>
+      </div>
+
+      {/* Contenido del testimonio */}
+      <div className="relative z-20 px-7 pb-8 -mt-20">
+        {/* Comilla gigante */}
+        <div
+          className="font-bebas text-[6rem] leading-[0.7] mb-3 select-none"
+          style={{ color: `${t.salsaColor}40` }}
+          aria-hidden="true"
+        >
+          "
+        </div>
+
+        <blockquote className="mb-6">
+          <p className="text-crema font-sans font-300 text-lg sm:text-xl leading-snug">
+            {t.quote}
+          </p>
+        </blockquote>
+
+        {/* Firma */}
+        <div className="flex items-center gap-3">
+          <div
+            className="h-px flex-shrink-0 w-6"
+            style={{ background: t.salsaColor }}
+          />
+          <div>
+            <p className="font-bebas tracking-widest text-crema text-base leading-none">
+              {t.nombre}
             </p>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-crema font-sans font-600 text-sm">{testimonios[active].nombre}</p>
-                <p className="text-crema/30 font-mono text-xs">{testimonios[active].ciudad}</p>
-              </div>
-              {testimonios[active].salsa && (
-                <span
-                  className="font-mono text-[10px] tracking-[0.2em] px-3 py-1 border uppercase"
-                  style={{
-                    color: colorPorSalsa[testimonios[active].salsa] || "#DC2626",
-                    borderColor: `${colorPorSalsa[testimonios[active].salsa] || "#DC2626"}33`,
-                  }}
-                >
-                  {testimonios[active].salsa}
-                </span>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Dots */}
-          <div className="flex justify-center gap-2 mt-6">
-            {testimonios.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setActive(i)}
-                aria-label={`Testimonio ${i + 1}`}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  i === active ? "bg-rojo scale-125" : "bg-carbon-medio"
-                }`}
-              />
-            ))}
+            <p className="font-mono text-[10px] tracking-[0.25em] uppercase mt-0.5"
+               style={{ color: `${t.salsaColor}90` }}>
+              {t.ciudad}
+            </p>
           </div>
         </div>
       </div>
-    </section>
+
+      {/* Línea inferior animada */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        style={{ background: t.salsaColor }}
+      />
+    </motion.div>
   );
 }

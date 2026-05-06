@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
 import { useRef } from "react";
 
-const usos = [
+const usosHome = [
   {
     id: "microdosis",
     numero: "01",
@@ -37,7 +37,40 @@ const usos = [
   },
 ];
 
-export default function Usos() {
+const usosSalsas = [
+  {
+    id: "microdosis",
+    numero: "01",
+    nombre: "MICRODOSIS",
+    contexto: "Todos los días",
+    copy: "Huevos, pasta, empanadas, lo que sea. La Microdosis no hace ruido — hace que cualquier plato sea mejor sin dominarlo.",
+    imagen: "/images/salsas-microdosis.jpg",
+    color: "#D97706",
+    tag: "Uso diario",
+  },
+  {
+    id: "ahumadosis",
+    numero: "02",
+    nombre: "AHUMADOSIS",
+    contexto: "Parrilla y carnes",
+    copy: "El ahumado se mete en la carne antes de que el fuego llegue. Para cortes a la parrilla, hamburguesas, marinadas. La diferencia se nota en el primer mordisco.",
+    imagen: "/images/salsas-ahumadosis.jpg",
+    color: "#EA580C",
+    tag: "Parrilla y asados",
+  },
+  {
+    id: "sobredosis",
+    numero: "03",
+    nombre: "SOBREDOSIS",
+    contexto: "Experiencias extremas",
+    copy: "Alitas, retos, salsas base. Una gota en el momento correcto lo cambia todo. No la uses si no estás listo.",
+    imagen: "/images/salsas-sobredosis.jpg",
+    color: "#DC2626",
+    tag: "No para todos",
+  },
+];
+
+export default function Usos({ variant = "home" }: { variant?: "home" | "salsas" }) {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -45,6 +78,8 @@ export default function Usos() {
   });
   const headerY = useTransform(scrollYProgress, [0, 0.4], [40, 0]);
   const headerOpacity = useTransform(scrollYProgress, [0, 0.25], [0, 1]);
+
+  const usos = variant === "salsas" ? usosSalsas : usosHome;
 
   return (
     <section id="usos" ref={containerRef} className="py-24 bg-carbon overflow-hidden">
@@ -57,13 +92,23 @@ export default function Usos() {
           <div className="flex items-center gap-4 mb-5">
             <div className="h-px w-8 bg-rojo" />
             <span className="text-xs tracking-[0.4em] text-rojo uppercase font-sans font-600">
-              En la mesa
+              {variant === "salsas" ? "Cómo usarlas" : "En la mesa"}
             </span>
           </div>
           <h2 className="font-bebas text-[clamp(2.8rem,6vw,4.5rem)] leading-none text-crema">
-            ASÍ SE VE
-            <br />
-            <span className="text-rojo">EN ACCIÓN.</span>
+            {variant === "salsas" ? (
+              <>
+                CADA SALSA,
+                <br />
+                <span className="text-rojo">SU MOMENTO.</span>
+              </>
+            ) : (
+              <>
+                ASÍ SE VE
+                <br />
+                <span className="text-rojo">EN ACCIÓN.</span>
+              </>
+            )}
           </h2>
         </motion.div>
 
@@ -78,11 +123,13 @@ export default function Usos() {
   );
 }
 
+type UsoItem = (typeof usosHome)[0];
+
 function UsoCard({
   uso,
   index,
 }: {
-  uso: (typeof usos)[0];
+  uso: UsoItem;
   index: number;
 }) {
   const ref = useRef(null);
@@ -95,11 +142,12 @@ function UsoCard({
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 50 }}
+      initial={{ opacity: 0, y: 60 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.7, delay: index * 0.12 }}
-      className="group relative bg-carbon overflow-hidden"
+      transition={{ type: "spring", stiffness: 60, damping: 16, delay: index * 0.12 }}
+      whileHover={{ y: -6, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+      className="group relative bg-carbon overflow-hidden cursor-default"
     >
       {/* Imagen con parallax */}
       <div className="relative h-[420px] lg:h-[520px] overflow-hidden">
@@ -150,8 +198,9 @@ function UsoCard({
 
       {/* Línea inferior animada */}
       <div
-        className="h-px w-0 group-hover:w-full transition-all duration-500 mx-7"
-        style={{ background: uso.color }}
+    
+        className="h-px w-0 group-hover:w-full transition-all duration-500"
+        style={{ background: `${uso.color}60` }}
       />
     </motion.div>
   );

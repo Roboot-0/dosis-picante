@@ -3,26 +3,37 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  trackCheckoutStarted,
+  trackFormCompleted,
+  trackPaymentSelected,
+  trackComprobanteUploaded,
+  trackPurchase,
+  trackCouponApplied,
+  trackCheckoutAbandoned,
+} from "@/lib/analytics";
 
 // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────────
 const PAGO_MOVIL = { telefono: "0414-262-4078", cedula: "V-11.741.520", nombre: "DOSIS C.A." };
-const WA_BASE = "https://wa.me/584142624078";
+const ZELLE      = { email: "dosispicante@gmail.com", nombre: "DOSIS C.A." };
+const WA_BASE    = "https://wa.me/584142624078";
 // ────────────────────────────────────────────────────────────────────────────
 
 const PRODUCTOS = [
-  { id: "microdosis", nombre: "MICRODOSIS", tagline: "El primer contacto",   precio: 6,  ml: "50 ml",      imagen: "/images/microdosis.png", color: "#D97706", nivel: 1 },
-  { id: "ahumadosis", nombre: "AHUMADOSIS", tagline: "La que convierte",      precio: 6,  ml: "50 ml",      imagen: "/images/ahumadosis.png", color: "#EA580C", nivel: 2 },
-  { id: "sobredosis", nombre: "SOBREDOSIS", tagline: "La última advertencia", precio: 12, ml: "30 ml",      imagen: "/images/sobredosis.png", color: "#DC2626", nivel: 3 },
-  { id: "kit",        nombre: "KIT DOSIS",  tagline: "Colección completa",    precio: 22, ml: "50+50+30 ml", imagen: "/images/kit.jpeg",       color: "#9CA3AF", nivel: 3 },
+  { id: "microdosis", nombre: "MICRODOSIS", tagline: "El primer contacto",   precio: 6,  ml: "50 ml",              imagen: "/images/microdosis.png", color: "#D97706", nivel: 1 },
+  { id: "ahumadosis", nombre: "AHUMADOSIS", tagline: "La que convierte",      precio: 6,  ml: "50 ml",              imagen: "/images/ahumadosis.png", color: "#EA580C", nivel: 2 },
+  { id: "sobredosis", nombre: "SOBREDOSIS", tagline: "La última advertencia", precio: 12, ml: "30 ml",              imagen: "/images/sobredosis.png", color: "#DC2626", nivel: 3 },
+  { id: "kit",        nombre: "KIT DOSIS",  tagline: "Colección completa",    precio: 22, ml: "2×50ml + 1×30ml",   imagen: "/images/kit-real.jpg",   color: "#9CA3AF", nivel: 3 },
 ];
 
 type Cart = Record<string, number>;
-type DeliveryType = "caracas" | "nacional";
-type PaymentMethod = "pagomovil" | "efectivo";
-interface FormData { nombre: string; email: string; telefono: string; cedula: string; direccion: string; ciudad: string; deliveryType: DeliveryType; }
+type DeliveryType  = "caracas" | "nacional";
+type PaymentMethod = "pagomovil" | "zelle" | "efectivo";
+interface FormData { nombre: string; email: string; telefono: string; direccion: string; ciudad: string; deliveryType: DeliveryType; }
 interface Comprobante { base64: string; mimeType: string; nombre: string; preview: string; }
+interface CuponInfo { codigo: string; tipo: "porcentaje" | "fijo"; valor: number; descripcion?: string; }
 
-// ─── FIELD (a nivel de módulo para no perder el focus) ───────────────────────
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function FormField({ label, value, onChange, placeholder, type = "text" }: {
   label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string;
 }) {
@@ -46,8 +57,8 @@ function Dots({ nivel, color }: { nivel: number; color: string }) {
 }
 
 // ─── STEP INDICATOR ──────────────────────────────────────────────────────────
-function StepIndicator({ step, hasComprobante }: { step: number; hasComprobante: boolean }) {
-  const steps = hasComprobante
+function StepIndicator({ step, needsComprobante }: { step: number; needsComprobante: boolean }) {
+  const steps = needsComprobante
     ? ["Carrito", "Datos", "Pago", "Comprobante", "Listo"]
     : ["Carrito", "Datos", "Pago", "Listo"];
   return (
@@ -70,14 +81,60 @@ function StepIndicator({ step, hasComprobante }: { step: number; hasComprobante:
   );
 }
 
-// ─── STEP 1: CARRITO ─────────────────────────────────────────────────────────
-function StepCarrito({ cart, setCart, onNext }: { cart: Cart; setCart: (c: Cart) => void; onNext: () => void }) {
-  const total = PRODUCTOS.reduce((s, p) => s + (cart[p.id] ?? 0) * p.precio, 0);
+// ─── STEP 1: CARRITO + CUPÓN ─────────────────────────────────────────────────
+function StepCarrito({
+  cart, setCart, onNext, cupon, setCupon,
+}: {
+  cart: Cart; setCart: (c: Cart) => void; onNext: () => void;
+  cupon: CuponInfo | null; setCupon: (c: CuponInfo | null) => void;
+}) {
+  const [codigoCupon, setCodigoCupon] = useState(cupon?.codigo ?? "");
+  const [cuponEstado, setCuponEstado] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [cuponMsg, setCuponMsg] = useState("");
+
+  const subtotal = PRODUCTOS.reduce((s, p) => s + (cart[p.id] ?? 0) * p.precio, 0);
+  const descuento = cupon
+    ? cupon.tipo === "porcentaje"
+      ? Math.round(subtotal * cupon.valor / 100 * 100) / 100
+      : Math.min(cupon.valor, subtotal)
+    : 0;
+  const total = Math.max(0, subtotal - descuento);
   const itemCount = Object.values(cart).reduce((s, v) => s + v, 0);
+
   const update = (id: string, d: number) => setCart({ ...cart, [id]: Math.max(0, (cart[id] ?? 0) + d) });
+
+  // Upsell: sugerir Kit si tiene ≥2 productos distintos
+  const productosSolos = PRODUCTOS.filter(p => p.id !== "kit" && (cart[p.id] ?? 0) > 0);
+  const tieneKit = (cart["kit"] ?? 0) > 0;
+  const sugerirKit = productosSolos.length >= 2 && !tieneKit;
+
+  const aplicarCupon = async () => {
+    const codigo = codigoCupon.trim().toUpperCase();
+    if (!codigo) return;
+    setCuponEstado("loading");
+    setCuponMsg("");
+    try {
+      const res = await fetch(`/api/cupon?codigo=${encodeURIComponent(codigo)}`);
+      const data = await res.json() as { ok: boolean; cupon?: CuponInfo; error?: string };
+      if (data.ok && data.cupon) {
+        setCupon(data.cupon);
+        setCuponEstado("ok");
+        setCuponMsg(data.cupon.descripcion || `${data.cupon.tipo === "porcentaje" ? data.cupon.valor + "%" : "$" + data.cupon.valor} de descuento aplicado`);
+        trackCouponApplied(codigo, descuento);
+      } else {
+        setCupon(null);
+        setCuponEstado("error");
+        setCuponMsg(data.error || "Código no válido");
+      }
+    } catch {
+      setCuponEstado("error");
+      setCuponMsg("Error al validar el código");
+    }
+  };
+
   return (
     <div>
-      <div className="divide-y divide-carbon-medio border border-carbon-medio mb-4">
+      <div className="divide-y divide-carbon-medio border border-carbon-medio mb-3">
         {PRODUCTOS.map((p) => {
           const qty = cart[p.id] ?? 0;
           return (
@@ -87,7 +144,8 @@ function StepCarrito({ cart, setCart, onNext }: { cart: Cart; setCart: (c: Cart)
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bebas text-base tracking-wide leading-none" style={{ color: p.color }}>{p.nombre}</p>
-                <p className="text-[10px] text-crema/30 font-sans">{p.ml} · {p.tagline} · <span className="text-crema/50">${p.precio}</span></p>
+                <p className="text-[10px] text-crema/30 font-sans">{p.ml} · <span className="text-crema/50">${p.precio}</span></p>
+                <Dots nivel={p.nivel} color={p.color} />
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => update(p.id, -1)} disabled={qty === 0}
@@ -100,13 +158,59 @@ function StepCarrito({ cart, setCart, onNext }: { cart: Cart; setCart: (c: Cart)
           );
         })}
       </div>
-      <div className="flex items-center justify-between">
+
+      {/* Upsell Kit */}
+      {sugerirKit && (
+        <motion.button
+          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          onClick={() => update("kit", 1)}
+          className="w-full mb-3 border border-rojo/30 bg-rojo/5 hover:bg-rojo/10 px-4 py-2.5 text-left flex items-center gap-3 transition-colors"
+        >
+          <span className="text-rojo text-lg">🌶</span>
+          <div className="flex-1">
+            <p className="text-xs font-bebas tracking-wide text-crema">¿Llevas las tres? El Kit te ahorra $5</p>
+            <p className="text-[9px] text-crema/30 font-mono">KIT DOSIS · 2×50ml + 1×30ml · $22</p>
+          </div>
+          <span className="text-rojo font-bebas text-sm tracking-wide">+ Agregar</span>
+        </motion.button>
+      )}
+
+      {/* Cupón */}
+      <div className="mb-3">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={codigoCupon}
+            onChange={(e) => { setCodigoCupon(e.target.value.toUpperCase()); setCuponEstado("idle"); setCuponMsg(""); if (!e.target.value) setCupon(null); }}
+            placeholder="Código de descuento"
+            className="flex-1 bg-carbon border border-carbon-medio px-3 py-2 text-xs font-mono text-crema placeholder:text-crema/20 focus:outline-none focus:border-rojo/50 transition-colors uppercase"
+          />
+          <button
+            onClick={aplicarCupon}
+            disabled={!codigoCupon.trim() || cuponEstado === "loading"}
+            className="px-4 py-2 border border-carbon-medio text-crema/50 font-bebas text-xs tracking-[0.15em] uppercase hover:border-rojo hover:text-crema transition-all disabled:opacity-30"
+          >
+            {cuponEstado === "loading" ? "…" : "Aplicar"}
+          </button>
+        </div>
+        {cuponMsg && (
+          <p className={`text-[10px] mt-1 font-mono ${cuponEstado === "ok" ? "text-green-400" : "text-red-400"}`}>
+            {cuponEstado === "ok" ? "✓ " : "✗ "}{cuponMsg}
+          </p>
+        )}
+      </div>
+
+      {/* Total */}
+      <div className="flex items-end justify-between">
         <div>
           {itemCount === 0
             ? <p className="text-xs text-crema/25 font-sans">Selecciona un producto.</p>
             : <div>
                 <p className="text-[9px] text-crema/30 font-mono tracking-widest uppercase">{itemCount} producto{itemCount !== 1 ? "s" : ""}</p>
-                <p className="font-bebas text-2xl text-crema">Total: <span className="text-rojo">${total}</span></p>
+                {descuento > 0 && (
+                  <p className="text-[10px] text-green-400 font-mono">− ${descuento.toFixed(2)} descuento</p>
+                )}
+                <p className="font-bebas text-2xl text-crema">Total: <span className="text-rojo">${total.toFixed(2)}</span></p>
               </div>
           }
         </div>
@@ -120,9 +224,11 @@ function StepCarrito({ cart, setCart, onNext }: { cart: Cart; setCart: (c: Cart)
 }
 
 // ─── STEP 2: DATOS ───────────────────────────────────────────────────────────
-function StepDatos({ form, setForm, onNext, onBack }: { form: FormData; setForm: (f: FormData) => void; onNext: () => void; onBack: () => void }) {
+function StepDatos({ form, setForm, onNext, onBack }: {
+  form: FormData; setForm: (f: FormData) => void; onNext: () => void; onBack: () => void;
+}) {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-  const valid = form.nombre.trim() && emailOk && form.telefono.trim() && form.cedula.trim() && form.direccion.trim() && form.ciudad.trim();
+  const valid = form.nombre.trim() && emailOk && form.telefono.trim() && form.direccion.trim() && form.ciudad.trim();
   const set = (k: keyof FormData) => (v: string) => setForm({ ...form, [k]: v });
   return (
     <div className="space-y-3">
@@ -130,10 +236,7 @@ function StepDatos({ form, setForm, onNext, onBack }: { form: FormData; setForm:
         <FormField label="Nombre" value={form.nombre} onChange={set("nombre")} placeholder="Juan Pérez" />
         <FormField label="Teléfono / WhatsApp" value={form.telefono} onChange={set("telefono")} placeholder="0412-000-0000" type="tel" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label="Correo electrónico" value={form.email} onChange={set("email")} placeholder="tu@correo.com" type="email" />
-        <FormField label="Cédula de Identidad" value={form.cedula} onChange={set("cedula")} placeholder="V-12.345.678" />
-      </div>
+      <FormField label="Correo electrónico" value={form.email} onChange={set("email")} placeholder="tu@correo.com" type="email" />
       <div>
         <p className="text-[9px] tracking-[0.3em] uppercase font-mono text-crema/35 mb-1.5">Tipo de entrega</p>
         <div className="grid grid-cols-2 gap-px bg-carbon-medio">
@@ -164,7 +267,7 @@ function StepDatos({ form, setForm, onNext, onBack }: { form: FormData; setForm:
   );
 }
 
-// ─── STEP 3: PAGO (con tasa BCV en tiempo real) ───────────────────────────────
+// ─── STEP 3: PAGO ─────────────────────────────────────────────────────────────
 function StepPago({ payment, setPayment, total, tasaBCV, loadingTasa, onNext, onBack }: {
   payment: PaymentMethod; setPayment: (p: PaymentMethod) => void;
   total: number; tasaBCV: number | null; loadingTasa: boolean;
@@ -174,7 +277,7 @@ function StepPago({ payment, setPayment, total, tasaBCV, loadingTasa, onNext, on
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-crema/40 font-sans">Total: <span className="text-crema font-600">${total}</span></p>
+      <p className="text-sm text-crema/40 font-sans">Total: <span className="text-crema font-600">${total.toFixed(2)}</span></p>
 
       {/* Pago Móvil */}
       <button onClick={() => setPayment("pagomovil")}
@@ -184,6 +287,7 @@ function StepPago({ payment, setPayment, total, tasaBCV, loadingTasa, onNext, on
             {payment === "pagomovil" && <div className="w-2 h-2 rounded-full bg-rojo" />}
           </div>
           <p className="font-bebas text-base tracking-wide text-crema">Pago Móvil</p>
+          <span className="text-[8px] font-mono text-crema/20 tracking-widest uppercase ml-auto">Venezuela</span>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 pl-6">
           {[["Teléfono", PAGO_MOVIL.telefono], ["Cédula/RIF", PAGO_MOVIL.cedula], ["Nombre", PAGO_MOVIL.nombre]].map(([l, v]) => (
@@ -193,7 +297,6 @@ function StepPago({ payment, setPayment, total, tasaBCV, loadingTasa, onNext, on
             </div>
           ))}
         </div>
-        {/* Monto en Bs. */}
         <div className="mt-3 pl-6 border-t border-rojo/15 pt-2">
           {loadingTasa ? (
             <p className="text-xs text-crema/30 font-mono animate-pulse">Consultando tasa BCV...</p>
@@ -206,9 +309,30 @@ function StepPago({ payment, setPayment, total, tasaBCV, loadingTasa, onNext, on
               <p className="text-[9px] text-crema/25 font-mono">1 USD = Bs. {tasaBCV?.toLocaleString("es-VE", { minimumFractionDigits: 2 })} · tasa BCV de hoy</p>
             </div>
           ) : (
-            <p className="text-[9px] text-crema/25 font-sans italic">Monto en Bs. no disponible — confirmamos por WhatsApp.</p>
+            <p className="text-[9px] text-crema/25 font-sans italic">Monto en Bs. — confirmamos por WhatsApp.</p>
           )}
         </div>
+      </button>
+
+      {/* Zelle */}
+      <button onClick={() => setPayment("zelle")}
+        className={`w-full text-left p-4 border-2 transition-all ${payment === "zelle" ? "border-rojo bg-rojo/5" : "border-carbon-medio hover:bg-carbon-claro"}`}>
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${payment === "zelle" ? "border-rojo" : "border-carbon-medio"}`}>
+            {payment === "zelle" && <div className="w-2 h-2 rounded-full bg-rojo" />}
+          </div>
+          <p className="font-bebas text-base tracking-wide text-crema">Zelle</p>
+          <span className="text-[8px] font-mono text-crema/20 tracking-widest uppercase ml-auto">USA · Internacional</span>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 pl-6">
+          {[["Email", ZELLE.email], ["Nombre", ZELLE.nombre]].map(([l, v]) => (
+            <div key={l}>
+              <span className="text-[8px] tracking-[0.25em] uppercase font-mono text-crema/20 block">{l}</span>
+              <span className="text-xs font-mono text-crema/65">{v}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[9px] text-crema/25 font-sans mt-2 pl-6">Sube el comprobante de la transferencia.</p>
       </button>
 
       {/* Efectivo */}
@@ -237,7 +361,7 @@ function StepPago({ payment, setPayment, total, tasaBCV, loadingTasa, onNext, on
         </button>
         <button onClick={onNext}
           className="flex-1 py-2.5 bg-rojo text-crema font-bebas text-sm tracking-[0.2em] uppercase hover:bg-rojo-oscuro transition-all">
-          {payment === "pagomovil" ? "Subir comprobante →" : "Confirmar pedido →"}
+          {payment === "efectivo" ? "Confirmar pedido →" : "Subir comprobante →"}
         </button>
       </div>
     </div>
@@ -245,14 +369,13 @@ function StepPago({ payment, setPayment, total, tasaBCV, loadingTasa, onNext, on
 }
 
 // ─── STEP 4: COMPROBANTE ─────────────────────────────────────────────────────
-function StepComprobante({ comprobante, setComprobante, onNext, onBack, submitting }: {
+function StepComprobante({ comprobante, setComprobante, onNext, onBack, submitting, payment }: {
   comprobante: Comprobante | null; setComprobante: (c: Comprobante | null) => void;
-  onNext: () => void; onBack: () => void; submitting: boolean;
+  onNext: () => void; onBack: () => void; submitting: boolean; payment: PaymentMethod;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (file: File) => {
-    // PDFs: no se pueden comprimir por canvas → se envían tal cual (suelen ser chicos)
     if (file.type === "application/pdf") {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -263,8 +386,6 @@ function StepComprobante({ comprobante, setComprobante, onNext, onBack, submitti
       reader.readAsDataURL(file);
       return;
     }
-
-    // Imágenes: comprimimos en canvas antes de subir para no romper el body del API
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
@@ -278,40 +399,31 @@ function StepComprobante({ comprobante, setComprobante, onNext, onBack, submitti
           height = Math.round(height * ratio);
         }
         const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          // fallback sin compresión
-          const base64 = dataUrl.split(",")[1];
-          setComprobante({ base64, mimeType: file.type, nombre: file.name, preview: dataUrl });
+          setComprobante({ base64: dataUrl.split(",")[1], mimeType: file.type, nombre: file.name, preview: dataUrl });
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
         const compressed = canvas.toDataURL("image/jpeg", 0.82);
-        const base64 = compressed.split(",")[1];
-        setComprobante({
-          base64,
-          mimeType: "image/jpeg",
-          nombre: file.name.replace(/\.[^.]+$/, "") + ".jpg",
-          preview: compressed,
-        });
+        setComprobante({ base64: compressed.split(",")[1], mimeType: "image/jpeg", nombre: file.name.replace(/\.[^.]+$/, "") + ".jpg", preview: compressed });
       };
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
 
+  const metodoLabel = payment === "zelle" ? "Zelle" : "Pago Móvil";
+
   return (
     <div className="space-y-4">
       <div>
         <p className="font-bebas text-lg text-crema tracking-wide">Sube tu comprobante</p>
         <p className="text-xs text-crema/40 font-sans mt-0.5 leading-relaxed">
-          Haz la transferencia por Pago Móvil y sube la captura de pantalla o foto del comprobante.
+          Haz la transferencia por {metodoLabel} y sube la captura de pantalla o foto del comprobante.
         </p>
       </div>
-
-      {/* Drop zone / preview */}
       <button type="button" onClick={() => inputRef.current?.click()}
         className={`w-full border-2 border-dashed transition-all flex flex-col items-center justify-center gap-3 relative overflow-hidden ${
           comprobante ? "border-rojo/40 bg-rojo/5 p-0 h-44" : "border-carbon-medio hover:border-rojo/40 hover:bg-rojo/5 p-8"
@@ -338,7 +450,6 @@ function StepComprobante({ comprobante, setComprobante, onNext, onBack, submitti
       </button>
       <input ref={inputRef} type="file" accept="image/*,application/pdf" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-
       <div className="flex gap-2">
         <button onClick={onBack} disabled={submitting}
           className="px-4 py-2.5 border border-carbon-medio text-crema/40 font-bebas text-sm tracking-[0.15em] uppercase hover:border-crema/20 transition-all flex items-center gap-1.5 disabled:opacity-30">
@@ -389,18 +500,36 @@ function StepConfirmado({ nombre, onReset }: { nombre: string; onReset: () => vo
 function CheckoutModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
   const [cart, setCart] = useState<Cart>({});
-  const [form, setForm] = useState<FormData>({ nombre: "", email: "", telefono: "", cedula: "", direccion: "", ciudad: "", deliveryType: "caracas" });
+  const [form, setForm] = useState<FormData>({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "", deliveryType: "caracas" });
   const [payment, setPayment] = useState<PaymentMethod>("pagomovil");
   const [comprobante, setComprobante] = useState<Comprobante | null>(null);
+  const [cupon, setCupon] = useState<CuponInfo | null>(null);
   const [tasaBCV, setTasaBCV] = useState<number | null>(null);
   const [loadingTasa, setLoadingTasa] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
-  const total = PRODUCTOS.reduce((s, p) => s + (cart[p.id] ?? 0) * p.precio, 0);
-  const isPayMov = payment === "pagomovil";
-  // step mapping: 1=carrito 2=datos 3=pago 4=comprobante(solo pagomovil) 5=listo
-  const totalSteps = isPayMov ? 5 : 4;
+
+  const subtotal = PRODUCTOS.reduce((s, p) => s + (cart[p.id] ?? 0) * p.precio, 0);
+  const descuento = cupon
+    ? cupon.tipo === "porcentaje"
+      ? Math.round(subtotal * cupon.valor / 100 * 100) / 100
+      : Math.min(cupon.valor, subtotal)
+    : 0;
+  const total = Math.max(0, subtotal - descuento);
+
+  const needsComprobante = payment === "pagomovil" || payment === "zelle";
+  const totalSteps = needsComprobante ? 5 : 4;
+
+  // GA4: fire checkout_started cuando se monta el modal
+  useEffect(() => { trackCheckoutStarted(total); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // GA4: fire checkout_abandoned cuando el usuario cierra sin completar
+  useEffect(() => {
+    const handleUnload = () => { if (step > 1 && step < totalSteps) trackCheckoutAbandoned(step); };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [step, totalSteps]);
 
   // Fetch tasa BCV cuando entra al paso de pago
   useEffect(() => {
@@ -408,7 +537,7 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
     setLoadingTasa(true);
     fetch("/api/tasa-bcv")
       .then((r) => r.json())
-      .then((d) => { if (d.tasa) setTasaBCV(d.tasa); })
+      .then((d) => { if ((d as { tasa?: number }).tasa) setTasaBCV((d as { tasa: number }).tasa); })
       .catch(() => {})
       .finally(() => setLoadingTasa(false));
   }, [step]);
@@ -417,10 +546,7 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     window.dispatchEvent(new Event("lenis-stop"));
-    return () => {
-      document.body.style.overflow = "";
-      window.dispatchEvent(new Event("lenis-start"));
-    };
+    return () => { document.body.style.overflow = ""; window.dispatchEvent(new Event("lenis-start")); };
   }, []);
 
   // Prevenir rueda en backdrop
@@ -434,61 +560,82 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
 
   // Escape
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") { if (step > 1 && step < totalSteps) trackCheckoutAbandoned(step); onClose(); } };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
+  }, [onClose, step, totalSteps]);
+
+  // Registrar checkout iniciado en Airtable (para recuperación de abandonados) cuando step → 3
+  useEffect(() => {
+    if (step !== 3 || !form.email) return;
+    const items = PRODUCTOS.filter(p => (cart[p.id] ?? 0) > 0).map(p => ({
+      id: p.id, nombre: p.nombre, qty: cart[p.id]!, precio: p.precio, subtotal: cart[p.id]! * p.precio,
+    }));
+    fetch("/api/checkout/iniciar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: form.email, nombre: form.nombre, items, total }),
+    }).catch(() => {});
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submitPedido = useCallback(async () => {
     setSubmitting(true);
     setSubmitError(null);
-    // Mapa id interno (frontend) → SKU de Airtable. Debe coincidir con
-    // idFrontendASku() en src/lib/airtable.ts.
-    // Nomenclatura: 2 letras + 2 números (ej. MI-01 = Microdosis 30ml).
-    // Futuros tamaños/variantes serían MI-02, MI-03, etc.
     const SKU_POR_ID: Record<string, string> = {
-      microdosis: "MI-01",
-      ahumadosis: "AH-01",
-      sobredosis: "SO-01",
-      kit:        "KI-01",
+      microdosis: "MI-01", ahumadosis: "AH-01", sobredosis: "SO-01", kit: "KI-01",
     };
     const items = PRODUCTOS.filter((p) => (cart[p.id] ?? 0) > 0).map((p) => ({
       sku: SKU_POR_ID[p.id] ?? p.id.toUpperCase(),
-      id: p.id,
-      nombre: p.nombre,
-      qty: cart[p.id]!,
-      precio: p.precio,
-      subtotal: cart[p.id]! * p.precio,
+      id: p.id, nombre: p.nombre, qty: cart[p.id]!, precio: p.precio, subtotal: cart[p.id]! * p.precio,
     }));
     const montoBS = tasaBCV ? total * tasaBCV : null;
     try {
       const res = await fetch("/api/pedido", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, total, form, payment, tasaBCV, montoBS, comprobante }),
+        body: JSON.stringify({ items, total, form, payment, tasaBCV, montoBS, comprobante, cupon: cupon?.codigo ?? null }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await res.json().catch(() => ({})) as { error?: string };
         throw new Error(data?.error || `Error ${res.status}`);
       }
+      const data = await res.json() as { idPedido?: string };
+      // GA4 purchase event
+      trackPurchase({
+        idPedido: data.idPedido || "unknown",
+        total,
+        items: items.map(i => ({ id: i.id, nombre: i.nombre, qty: i.qty, precio: i.precio })),
+      });
+      // Marcar checkout como completado (cancela el recovery email)
+      fetch("/api/checkout/completar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email }),
+      }).catch(() => {});
       setSubmitting(false);
       setStep(totalSteps);
     } catch (e) {
-      console.error("Error enviando pedido:", e);
-      setSubmitError(
-        e instanceof Error ? e.message : "No pudimos enviar el pedido. Revisa tu conexión o escríbenos por WhatsApp."
-      );
+      setSubmitError(e instanceof Error ? e.message : "No pudimos enviar el pedido. Revisa tu conexión o escríbenos por WhatsApp.");
       setSubmitting(false);
     }
-  }, [cart, form, payment, tasaBCV, total, comprobante, totalSteps]);
+  }, [cart, form, payment, tasaBCV, total, comprobante, totalSteps, cupon]);
 
-  const handlePagoNext = () => {
-    if (isPayMov) { setStep(4); } else { submitPedido(); }
+  // Handlers de navegación con tracking GA4
+  const goToStep2 = () => { setStep(2); };
+  const goToStep3 = () => { trackFormCompleted(form.deliveryType); setStep(3); };
+  const goToStep4orSubmit = () => {
+    trackPaymentSelected(payment);
+    if (needsComprobante) { setStep(4); }
+    else { submitPedido(); }
+  };
+  const goSubmitWithComprobante = () => {
+    trackComprobanteUploaded(payment);
+    submitPedido();
   };
 
   const reset = () => {
-    setStep(1); setCart({}); setComprobante(null); setTasaBCV(null);
-    setForm({ nombre: "", email: "", telefono: "", cedula: "", direccion: "", ciudad: "", deliveryType: "caracas" });
+    setStep(1); setCart({}); setComprobante(null); setTasaBCV(null); setCupon(null);
+    setForm({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "", deliveryType: "caracas" });
     setPayment("pagomovil");
   };
 
@@ -496,12 +643,10 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
     <motion.div ref={backdropRef}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) { if (step > 1 && step < totalSteps) trackCheckoutAbandoned(step); onClose(); } }}
       style={{ background: "rgba(8,8,8,0.88)", backdropFilter: "blur(8px)" }}>
       <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="tienda-modal-title"
+        role="dialog" aria-modal="true" aria-labelledby="tienda-modal-title"
         initial={{ opacity: 0, y: 32, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 16, scale: 0.97 }} transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
         className="relative w-full max-w-md bg-carbon border border-carbon-medio shadow-2xl"
@@ -513,39 +658,31 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
             <span className="text-crema/20 font-mono text-xs">·</span>
             <span className="text-[10px] tracking-[0.3em] text-crema/35 font-mono uppercase">Tu pedido</span>
           </div>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center text-crema/25 hover:text-crema hover:bg-carbon-medio transition-all" aria-label="Cerrar">
+          <button onClick={() => { if (step > 1 && step < totalSteps) trackCheckoutAbandoned(step); onClose(); }}
+            className="w-7 h-7 flex items-center justify-center text-crema/25 hover:text-crema hover:bg-carbon-medio transition-all" aria-label="Cerrar">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
           </button>
         </div>
-
         {/* Contenido */}
         <div className="px-5 py-4">
-          <StepIndicator step={step} hasComprobante={isPayMov} />
+          <StepIndicator step={step} needsComprobante={needsComprobante} />
           {submitError && (
             <div className="mb-3 border border-rojo/40 bg-rojo/10 px-3 py-2 text-xs font-sans text-rojo/90">
               {submitError}{" "}
-              <a
-                href={`${WA_BASE}?text=Hola!%20Tuve%20un%20problema%20con%20el%20checkout`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2 hover:text-rojo"
-              >
-                Escríbenos por WhatsApp
-              </a>
-              .
+              <a href={`${WA_BASE}?text=Hola!%20Tuve%20un%20problema%20con%20el%20checkout`} target="_blank" rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-rojo">Escríbenos por WhatsApp</a>.
             </div>
           )}
           <AnimatePresence mode="wait">
             <motion.div key={step} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }}>
-              {step === 1 && <StepCarrito cart={cart} setCart={setCart} onNext={() => setStep(2)} />}
-              {step === 2 && <StepDatos form={form} setForm={setForm} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
-              {step === 3 && <StepPago payment={payment} setPayment={setPayment} total={total} tasaBCV={tasaBCV} loadingTasa={loadingTasa} onNext={handlePagoNext} onBack={() => setStep(2)} />}
-              {step === 4 && isPayMov && <StepComprobante comprobante={comprobante} setComprobante={setComprobante} onNext={submitPedido} onBack={() => setStep(3)} submitting={submitting} />}
+              {step === 1 && <StepCarrito cart={cart} setCart={setCart} onNext={goToStep2} cupon={cupon} setCupon={setCupon} />}
+              {step === 2 && <StepDatos form={form} setForm={setForm} onNext={goToStep3} onBack={() => setStep(1)} />}
+              {step === 3 && <StepPago payment={payment} setPayment={setPayment} total={total} tasaBCV={tasaBCV} loadingTasa={loadingTasa} onNext={goToStep4orSubmit} onBack={() => setStep(2)} />}
+              {step === 4 && needsComprobante && <StepComprobante comprobante={comprobante} setComprobante={setComprobante} onNext={goSubmitWithComprobante} onBack={() => setStep(3)} submitting={submitting} payment={payment} />}
               {step === totalSteps && <StepConfirmado nombre={form.nombre} onReset={reset} />}
             </motion.div>
           </AnimatePresence>
         </div>
-
         {step < totalSteps && (
           <div className="px-5 py-2.5 border-t border-carbon-medio flex items-center gap-2">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-crema/12">
@@ -559,86 +696,83 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── SECCIÓN EN LA PÁGINA ────────────────────────────────────────────────────
+// ─── COMPONENTE GLOBAL ───────────────────────────────────────────────────────
 export default function Tienda() {
   const [open, setOpen] = useState(false);
-
-  // Escucha el evento del botón "Pedir Ahora" del CTAFinal
   useEffect(() => {
     const h = () => setOpen(true);
     window.addEventListener("open-tienda", h);
     return () => window.removeEventListener("open-tienda", h);
   }, []);
-
   return (
-    <>
-      <section id="tienda" className="py-24 bg-carbon relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 60% 50% at 50% 50%, #DC262608 0%, transparent 70%)" }} />
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="flex items-center gap-4 mb-5">
-                <div className="h-px w-8 bg-rojo" />
-                <span className="text-xs tracking-[0.4em] text-rojo uppercase font-sans font-600">Pedidos</span>
-              </div>
-              <h2 className="font-bebas text-[clamp(3rem,7vw,5.5rem)] leading-none text-crema mb-5">
-                HAZ TU<br /><span className="text-rojo">PEDIDO.</span>
-              </h2>
-              <p className="text-crema/40 font-sans text-sm leading-relaxed max-w-sm mb-7">
-                Elige tu salsa, coloca tu dirección y elige cómo pagar. El proceso toma menos de dos minutos.
-              </p>
-              <div className="space-y-2.5 mb-8">
-                {[["📦", "Delivery en Caracas"], ["🚚", "Envíos a todo el país"], ["💳", "Pago Móvil o efectivo contra entrega"]].map(([icon, text]) => (
-                  <div key={text} className="flex items-center gap-3">
-                    <span className="text-sm">{icon}</span>
-                    <span className="text-sm text-crema/45 font-sans">{text}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button onClick={() => setOpen(true)}
-                  className="group flex items-center gap-3 px-8 py-4 bg-rojo text-crema font-bebas text-lg tracking-[0.2em] uppercase hover:bg-rojo-oscuro transition-all duration-300">
-                  Hacer mi pedido
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-1 transition-transform">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </button>
-                <a href={`${WA_BASE}?text=Hola!%20Tengo%20dudas%20sobre%20las%20salsas%20DOSIS%20%F0%9F%8C%B6`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-6 py-4 border border-carbon-medio text-crema/50 font-bebas text-base tracking-[0.2em] uppercase hover:border-rojo hover:text-crema transition-all duration-300">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-crema/40">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
-                  Habla con nosotros
-                </a>
-              </div>
+    <AnimatePresence>
+      {open && <CheckoutModal onClose={() => setOpen(false)} />}
+    </AnimatePresence>
+  );
+}
+
+// ─── SECCIÓN VISUAL (en /salsas) ─────────────────────────────────────────────
+export function TiendaSeccion() {
+  return (
+    <section id="tienda" className="py-24 bg-carbon relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse 60% 50% at 50% 50%, #DC262608 0%, transparent 70%)" }} />
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <div className="flex items-center gap-4 mb-5">
+              <div className="h-px w-8 bg-rojo" />
+              <span className="text-xs tracking-[0.4em] text-rojo uppercase font-sans font-600">Pedidos</span>
             </div>
-            {/* Lista de precios */}
-            <div className="border border-carbon-medio">
-              {PRODUCTOS.map((p, i) => (
-                <div key={p.id} className={`flex items-center gap-4 px-5 py-3.5 ${i < PRODUCTOS.length - 1 ? "border-b border-carbon-medio" : ""}`}>
-                  <div className="relative w-11 h-11 flex-shrink-0">
-                    <Image src={p.imagen} alt={p.nombre} fill className="object-contain" sizes="44px" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bebas text-lg tracking-wide leading-none" style={{ color: p.color }}>{p.nombre}</p>
-                    <p className="text-[10px] text-crema/30 font-sans">{p.tagline}</p>
-                  </div>
-                  <p className="font-bebas text-2xl text-crema">${p.precio}</p>
+            <h2 className="font-bebas text-[clamp(3rem,7vw,5.5rem)] leading-none text-crema mb-5">
+              HAZ TU<br /><span className="text-rojo">PEDIDO.</span>
+            </h2>
+            <p className="text-crema/40 font-sans text-sm leading-relaxed max-w-sm mb-7">
+              Elige tu salsa, coloca tu dirección y elige cómo pagar. El proceso toma menos de dos minutos.
+            </p>
+            <div className="space-y-2.5 mb-8">
+              {[["📦", "Delivery en Caracas"], ["🚚", "Envíos a todo el país"], ["💳", "Pago Móvil, Zelle o efectivo"]].map(([icon, text]) => (
+                <div key={text} className="flex items-center gap-3">
+                  <span className="text-sm">{icon}</span>
+                  <span className="text-sm text-crema/45 font-sans">{text}</span>
                 </div>
               ))}
-              <div className="px-5 py-2.5 bg-carbon-claro border-t border-carbon-medio">
-                <p className="text-[9px] text-crema/20 font-mono tracking-widest text-center uppercase">Precios en USD · Pago Bs. al cambio BCV del día</p>
-              </div>
             </div>
-          </motion.div>
-        </div>
-      </section>
-
-      <AnimatePresence>
-        {open && <CheckoutModal onClose={() => setOpen(false)} />}
-      </AnimatePresence>
-    </>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button onClick={() => window.dispatchEvent(new Event("open-tienda"))}
+                className="group flex items-center gap-3 px-8 py-4 bg-rojo text-crema font-bebas text-lg tracking-[0.2em] uppercase hover:bg-rojo-oscuro transition-all duration-300">
+                Hacer mi pedido
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-1 transition-transform">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+              <a href={`${WA_BASE}?text=Hola!%20Tengo%20dudas%20sobre%20las%20salsas%20DOSIS%20%F0%9F%8C%B6`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 px-6 py-4 border border-carbon-medio text-crema/50 font-bebas text-base tracking-[0.2em] uppercase hover:border-rojo hover:text-crema transition-all duration-300">
+                Habla con nosotros
+              </a>
+            </div>
+          </div>
+          {/* Lista de precios */}
+          <div className="border border-carbon-medio">
+            {PRODUCTOS.map((p, i) => (
+              <div key={p.id} className={`flex items-center gap-4 px-5 py-3.5 ${i < PRODUCTOS.length - 1 ? "border-b border-carbon-medio" : ""}`}>
+                <div className="relative w-11 h-11 flex-shrink-0">
+                  <Image src={p.imagen} alt={p.nombre} fill className="object-contain" sizes="44px" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bebas text-lg tracking-wide leading-none" style={{ color: p.color }}>{p.nombre}</p>
+                  <p className="text-[10px] text-crema/30 font-sans">{p.tagline}</p>
+                </div>
+                <p className="font-bebas text-2xl text-crema">${p.precio}</p>
+              </div>
+            ))}
+            <div className="px-5 py-2.5 bg-carbon-claro border-t border-carbon-medio">
+              <p className="text-[9px] text-crema/20 font-mono tracking-widest text-center uppercase">Precios en USD · Pago Bs. al cambio BCV del día</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
   );
 }

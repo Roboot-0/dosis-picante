@@ -6,11 +6,31 @@ import {
   upsertCliente,
   crearPedido,
   generarIdPedido,
+  incrementarUsosCupon,
 } from "@/lib/airtable";
 
 // Route handler en Node.js runtime
 export const runtime = "nodejs";
 export const maxDuration = 30;
+
+// ─── Fuente de verdad de precios — nunca se confía en el cliente ───────────
+const PRECIOS: Record<string, number> = {
+  microdosis: 6,
+  ahumadosis: 6,
+  sobredosis: 12,
+  kit:        22,
+};
+
+const MIME_PERMITIDOS = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+]);
+
+// ~5 MB en base64 (base64 infla ~33%, así que 5 MB real ≈ 6.7 MB base64)
+const MAX_BASE64_CHARS = 7_000_000;
 
 // Destinatario (dónde llegan los pedidos)
 const DESTINATARIO = process.env.PEDIDOS_DESTINATARIO || "dosispicante@gmail.com";
@@ -47,7 +67,6 @@ type PedidoFormLike = {
   nombre?: string;
   email?: string;
   telefono?: string;
-  cedula?: string;
   direccion?: string;
   ciudad?: string;
   deliveryType?: string;
@@ -70,7 +89,7 @@ function guardarClienteEnCSV(
     const esNuevo = !fs.existsSync(csvPath);
     if (esNuevo) {
       const header =
-        "\uFEFFFecha,Hora,Nombre,Email,Teléfono,Cédula,Dirección,Ciudad,Entrega,Método de pago,Total (USD),Productos\n";
+        "\uFEFFFecha,Hora,Nombre,Email,Teléfono,Dirección,Ciudad,Entrega,Método de pago,Total (USD),Productos\n";
       fs.writeFileSync(csvPath, header, "utf-8");
     }
 
@@ -98,7 +117,6 @@ function guardarClienteEnCSV(
       form.nombre || "",
       form.email || "",
       form.telefono || "",
-      form.cedula || "",
       form.direccion || "",
       form.ciudad || "",
       deliveryLabel,
@@ -134,8 +152,43 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { items, total, form, payment, tasaBCV, montoBS, comprobante } = body;
-    logDebug(`Body recibido: ${form?.nombre ?? "sin nombre"} - total $${total} - ${items?.length ?? 0} items - comprobante: ${comprobante ? "sí" : "no"}`);
+    const { items, form, payment, tasaBCV, montoBS, comprobante, cupon } = body as {
+      items: Array<{ sku?: string; nombre: string; qty: number; precio?: number; subtotal: number }>;
+      form: Record<string, string>; payment: string;
+      tasaBCV?: number; montoBS?: number;
+      comprobante?: { base64: string; mimeType: string; nombre: string } | null;
+      cupon?: string | null;
+    };
+
+    // ── Validar y recalcular total server-side ────────────────────────────────
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ ok: false, error: "Pedido vacío" }, { status: 400 });
+    }
+    let total = 0;
+    for (const item of items) {
+      const sku = (item.sku || "").toLowerCase();
+      const precioUnitario = PRECIOS[sku];
+      if (precioUnitario === undefined) {
+        logDebug(`WARN: SKU desconocido "${sku}" — rechazando pedido`);
+        return NextResponse.json({ ok: false, error: `Producto desconocido: ${sku}` }, { status: 400 });
+      }
+      const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+      total += precioUnitario * qty;
+    }
+
+    // ── Validar comprobante (mimeType + tamaño) ───────────────────────────────
+    if (comprobante) {
+      if (!MIME_PERMITIDOS.has(comprobante.mimeType)) {
+        logDebug(`WARN: mimeType rechazado "${comprobante.mimeType}"`);
+        return NextResponse.json({ ok: false, error: "Formato de comprobante no permitido" }, { status: 400 });
+      }
+      if ((comprobante.base64?.length ?? 0) > MAX_BASE64_CHARS) {
+        logDebug(`WARN: comprobante demasiado grande (${comprobante.base64?.length} chars)`);
+        return NextResponse.json({ ok: false, error: "Comprobante demasiado grande (máx 5 MB)" }, { status: 400 });
+      }
+    }
+
+    logDebug(`Body recibido: ${form?.nombre ?? "sin nombre"} - total recalculado $${total} - ${items?.length ?? 0} items - comprobante: ${comprobante ? "sí" : "no"}`);
 
     const deliveryLabel =
       form.deliveryType === "caracas"
@@ -143,7 +196,14 @@ export async function POST(req: NextRequest) {
         : "Envío Nacional — Zoom/Domesa/MRW (a cargo del comprador)";
 
     const paymentLabel =
-      payment === "pagomovil" ? "Pago Móvil" : "Efectivo contra entrega";
+      payment === "pagomovil" ? "Pago Móvil"
+      : payment === "zelle" ? "Zelle"
+      : "Efectivo contra entrega";
+
+    // Incrementar uso del cupón si aplicó uno (fire-and-forget)
+    if (cupon) {
+      incrementarUsosCupon(cupon).catch(() => {});
+    }
 
     const itemsHtml = (items as { nombre: string; qty: number; subtotal: number }[])
       .map(
@@ -185,7 +245,6 @@ export async function POST(req: NextRequest) {
 
         <div style="border:1px solid #292524;padding:16px;margin-bottom:16px;background:#111;">
           <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Nombre:</strong> ${form.nombre}</p>
-          <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Cédula:</strong> ${form.cedula || "—"}</p>
           <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Teléfono:</strong> ${form.telefono}</p>
           <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Dirección:</strong> ${form.direccion}, ${form.ciudad}</p>
           <p style="margin:5px 0;color:#aaa;font-size:14px;"><strong style="color:#eee;">Entrega:</strong> ${deliveryLabel}</p>
@@ -237,72 +296,68 @@ export async function POST(req: NextRequest) {
     const emailClienteValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente);
 
     if (emailClienteValido) {
-      const itemsHtmlCliente = (items as { nombre: string; qty: number; subtotal: number }[])
-        .map(
-          (i) =>
-            `<tr>
-              <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#374151;">${i.nombre}</td>
-              <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:#6b7280;">${i.qty}</td>
-              <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#374151;">$${i.subtotal}</td>
-            </tr>`
-        )
-        .join("");
-
       const htmlCliente = `
-        <div style="background:#f9fafb;font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
-          <div style="background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+        <div style="background:#0a0a0a;color:#e5e0d8;font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
+          <h1 style="font-size:28px;letter-spacing:0.2em;color:#DC2626;margin:0 0 4px;">DOSIS</h1>
+          <p style="color:#555;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;margin:0 0 28px;">Confirmación de pedido · C18H27NO3</p>
 
-            <div style="background:#DC2626;padding:20px 28px;">
-              <p style="color:#fff;font-size:22px;font-weight:bold;letter-spacing:0.15em;margin:0;">DOSIS</p>
-            </div>
+          <p style="color:#e5e0d8;font-size:15px;line-height:1.6;margin:0 0 16px;">
+            Hola <strong>${form.nombre}</strong>,
+          </p>
+          <p style="color:#aaa;font-size:14px;line-height:1.7;margin:0 0 24px;">
+            Recibimos tu pedido correctamente. En las próximas horas te escribimos por WhatsApp al
+            <strong style="color:#e5e0d8;">${form.telefono}</strong> para confirmar los detalles de la entrega.
+          </p>
 
-            <div style="padding:28px;">
-              <p style="color:#111827;font-size:16px;margin:0 0 8px;">Hola <strong>${form.nombre}</strong>,</p>
-              <p style="color:#4b5563;font-size:14px;line-height:1.7;margin:0 0 24px;">
-                Recibimos tu pedido. Te contactamos por WhatsApp al <strong>${form.telefono}</strong>
-                en las próximas horas para coordinar la entrega.
-              </p>
+          <p style="color:#555;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;margin:24px 0 8px;">Resumen del pedido</p>
+          <table style="width:100%;border-collapse:collapse;border:1px solid #292524;margin-bottom:16px;">
+            <thead>
+              <tr style="background:#1c1917;">
+                <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#666;">Producto</th>
+                <th style="padding:10px 12px;text-align:center;font-size:11px;color:#666;">Cant.</th>
+                <th style="padding:10px 12px;text-align:right;font-size:11px;color:#666;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+            <tfoot>
+              <tr style="background:#1c1917;">
+                <td colspan="2" style="padding:12px;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#555;">Total</td>
+                <td style="padding:12px;text-align:right;font-size:22px;font-weight:bold;color:#DC2626;">$${total}</td>
+              </tr>
+            </tfoot>
+          </table>
 
-              <p style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px;font-weight:600;">Resumen</p>
-              <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:20px;">
-                <thead>
-                  <tr style="background:#f3f4f6;">
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;">Producto</th>
-                    <th style="padding:10px 12px;text-align:center;font-size:11px;color:#6b7280;font-weight:600;">Cant.</th>
-                    <th style="padding:10px 12px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>${itemsHtmlCliente}</tbody>
-                <tfoot>
-                  <tr style="background:#f3f4f6;">
-                    <td colspan="2" style="padding:12px;font-size:12px;color:#6b7280;font-weight:600;">Total</td>
-                    <td style="padding:12px;text-align:right;font-size:18px;font-weight:bold;color:#DC2626;">$${total}</td>
-                  </tr>
-                </tfoot>
-              </table>
-
-              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px;margin-bottom:20px;">
-                <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Entrega:</strong> ${deliveryLabel}</p>
-                <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Dirección:</strong> ${form.direccion}, ${form.ciudad}</p>
-                <p style="margin:4px 0;color:#374151;font-size:13px;"><strong>Pago:</strong> ${paymentLabel}</p>
-              </div>
-
-              <p style="color:#4b5563;font-size:13px;line-height:1.7;margin:0 0 4px;">
-                ¿Tienes dudas? Escríbenos al WhatsApp
-                <a href="https://wa.me/584142624078" style="color:#DC2626;text-decoration:none;">+58 414-262-4078</a>.
-              </p>
-            </div>
-
-            <div style="background:#f3f4f6;padding:14px 28px;border-top:1px solid #e5e7eb;">
-              <p style="color:#9ca3af;font-size:11px;margin:0;">DOSIS Picante · Venezuela</p>
-            </div>
-
+          <div style="border:1px solid #292524;padding:16px;margin-bottom:24px;background:#111;">
+            <p style="margin:5px 0;color:#aaa;font-size:13px;"><strong style="color:#eee;">Entrega:</strong> ${deliveryLabel}</p>
+            <p style="margin:5px 0;color:#aaa;font-size:13px;"><strong style="color:#eee;">Dirección:</strong> ${form.direccion}, ${form.ciudad}</p>
+            <p style="margin:5px 0;color:#aaa;font-size:13px;"><strong style="color:#eee;">Método de pago:</strong> ${paymentLabel}</p>
           </div>
+
+          <p style="color:#555;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;margin:24px 0 8px;">¿Qué sigue?</p>
+          <ol style="color:#aaa;font-size:13px;line-height:1.8;padding-left:20px;margin:0 0 24px;">
+            <li>Verificamos tu comprobante.</li>
+            <li>Te contactamos por WhatsApp para confirmar.</li>
+            <li>Coordinamos la entrega.</li>
+          </ol>
+
+          <p style="color:#aaa;font-size:13px;line-height:1.7;margin:24px 0 8px;">
+            Si tienes alguna duda, responde este correo o escríbenos al WhatsApp
+            <a href="https://wa.me/584142624078" style="color:#DC2626;text-decoration:none;">+58 414-262-4078</a>.
+          </p>
+
+          <p style="color:#e5e0d8;font-size:14px;margin:24px 0 0;">
+            Gracias por elegir DOSIS. El picor está en camino.<br>
+            <strong style="letter-spacing:0.1em;">— DOSIS</strong>
+          </p>
+
+          <p style="color:#333;font-size:10px;margin-top:32px;letter-spacing:0.3em;text-transform:uppercase;border-top:1px solid #292524;padding-top:16px;">
+            DOSIS · C18H27NO3 · Venezuela
+          </p>
         </div>
       `;
 
       const destinoComprador = emailCliente;
-      const asuntoComprador = `🌶 Confirmación de tu pedido DOSIS — $${total}`;
+      const asuntoComprador = `Confirmación de tu pedido DOSIS — $${total}`;
 
       logDebug(`Enviando confirmación al cliente (${destinoComprador})...`);
       const { data: clienteData, error: clienteError } = await resend.emails.send({
@@ -367,9 +422,9 @@ export async function POST(req: NextRequest) {
           totalUSD:       total,
           tasaBCV:        typeof tasaBCV === "number" ? tasaBCV : undefined,
           totalBs:        typeof montoBS === "number" ? montoBS : undefined,
-          metodoPago:     payment === "pagomovil" ? "Pago Móvil" : "Efectivo",
+          metodoPago:     payment === "pagomovil" ? "Pago Móvil" : payment === "zelle" ? "Zelle" : "Efectivo",
           direccionEnvio: `${form.direccion ?? ""}, ${form.ciudad ?? ""}`.trim().replace(/^,\s*/, ""),
-          notas:          `Entrega: ${deliveryLabel}${form.cedula ? ` · Cédula: ${form.cedula}` : ""}${comprobante ? " · Comprobante en email admin" : ""}`,
+          notas:          `Entrega: ${deliveryLabel}${comprobante ? " · Comprobante en email admin" : ""}`,
         });
         airtableIdPedido = idFinal;
         logDebug(`Airtable OK (sin email). idPedido=${idFinal}`);
@@ -400,9 +455,9 @@ export async function POST(req: NextRequest) {
           totalUSD:       total,
           tasaBCV:        typeof tasaBCV === "number" ? tasaBCV : undefined,
           totalBs:        typeof montoBS === "number" ? montoBS : undefined,
-          metodoPago:     payment === "pagomovil" ? "Pago Móvil" : "Efectivo",
+          metodoPago:     payment === "pagomovil" ? "Pago Móvil" : payment === "zelle" ? "Zelle" : "Efectivo",
           direccionEnvio: `${form.direccion ?? ""}, ${form.ciudad ?? ""}`.trim().replace(/^,\s*/, ""),
-          notas:          `Entrega: ${deliveryLabel}${form.cedula ? ` · Cédula: ${form.cedula}` : ""}${comprobante ? " · Comprobante en email admin" : ""}`,
+          notas:          `Entrega: ${deliveryLabel}${comprobante ? " · Comprobante en email admin" : ""}`,
         });
         airtableIdPedido = idFinal;
         logDebug(`Airtable OK. idPedido=${idFinal} clienteId=${clienteId}`);
@@ -418,8 +473,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, id: adminData?.id, idPedido: airtableIdPedido });
   } catch (err) {
-    logDebug(`ERROR excepción en POST /api/pedido: ${err instanceof Error ? err.message : String(err)}`);
-    console.error("Error enviando pedido:", err);
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    logDebug(`ERROR general: ${msg}`);
+    console.error("Error en POST /api/pedido:", err);
+    return NextResponse.json(
+      { ok: false, error: "Error interno del servidor" },
+      { status: 500 }
+    );
   }
 }

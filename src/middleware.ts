@@ -21,11 +21,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // Verifica el token con Web Crypto
-  const secret =
-    process.env.ADMIN_SECRET ||
-    process.env.AIRTABLE_API_KEY ||
-    "dosis-admin-fallback-secret";
-  const password = process.env.ADMIN_PASSWORD || "dosis2024";
+  const secret = process.env.ADMIN_SECRET || process.env.AIRTABLE_API_KEY;
+  const password = process.env.ADMIN_PASSWORD;
+  if (!secret || !password) {
+    console.error("ADMIN_SECRET / ADMIN_PASSWORD no configurados");
+    return NextResponse.json({ ok: false, error: "Configuración incompleta" }, { status: 500 });
+  }
 
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
