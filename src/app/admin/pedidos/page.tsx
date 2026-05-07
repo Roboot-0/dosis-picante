@@ -20,11 +20,11 @@ interface Pedido {
   };
 }
 
-const ESTADOS_PAGO = ["Pendiente", "Pagado", "Reembolsado", "Cancelado"];
+const ESTADOS_PAGO = ["Pendiente", "Confirmado", "Reembolsado", "Cancelado"];
 const ESTADOS_ENVIO = ["Pendiente", "Preparando", "Enviado", "Entregado", "Devuelto"];
 
 function estadoPagoStyle(e: string) {
-  if (e === "Pagado") return "bg-green-900/40 text-green-400 border border-green-800/40";
+  if (e === "Confirmado" || e === "Cobrado") return "bg-green-900/40 text-green-400 border border-green-800/40";
   if (e === "Pendiente") return "bg-yellow-900/40 text-yellow-400 border border-yellow-800/40";
   if (e === "Reembolsado") return "bg-blue-900/40 text-blue-400 border border-blue-800/40";
   return "bg-red-900/40 text-red-400 border border-red-800/40";
