@@ -2,10 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Source_Sans_3 } from "next/font/google";
 import { faqs } from "@/data/faqs";
 import SmoothScroll from "@/components/SmoothScroll";
-import Nav from "@/components/Nav";
-import Tienda from "@/components/Tienda";
-import Footer from "@/components/Footer";
-import CTAFlotante from "@/components/CTAFlotante";
+import PublicShell from "@/components/PublicShell";
 import "./globals.css";
 
 const bebas = Bebas_Neue({
@@ -226,11 +223,7 @@ export default function RootLayout({
       <body>
         <div className="noise-overlay" aria-hidden="true" />
         <SmoothScroll>
-          <Nav />
-          <main>{children}</main>
-          <Footer />
-          <Tienda />
-          <CTAFlotante />
+          <PublicShell>{children}</PublicShell>
         </SmoothScroll>
       </body>
     </html>
