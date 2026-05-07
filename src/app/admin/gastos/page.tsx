@@ -8,6 +8,8 @@ interface Gasto {
   fields: {
     Concepto: string;
     "Monto USD": number;
+    "Monto Original": number;
+    Moneda: string;
     Fecha: string;
     Mes: string;
     "Categoría": string;
@@ -18,6 +20,7 @@ interface Gasto {
 
 const CATEGORIAS = ["Insumos", "Empaque", "Logística", "Marketing", "Operaciones", "Servicios", "Otros"];
 const ESTADOS = ["Pagado", "Pendiente", "Cancelado"];
+const MONEDAS = ["USD", "EUR", "Binance", "Bs"];
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 const catColor = (cat: string) => {
@@ -39,9 +42,25 @@ const estadoColor = (e: string) => {
   return "bg-red-900/40 text-red-400";
 };
 
+const monedaColor = (m: string) => {
+  if (m === "USD") return "bg-green-900/40 text-green-400";
+  if (m === "EUR") return "bg-blue-900/40 text-blue-400";
+  if (m === "Binance") return "bg-yellow-900/40 text-yellow-400";
+  if (m === "Bs") return "bg-orange-900/40 text-orange-400";
+  return "bg-[#3C3835] text-[#A8A29E]";
+};
+
+const monedaSymbol = (m: string) => {
+  if (m === "EUR") return "€";
+  if (m === "Bs") return "Bs ";
+  return "$";
+};
+
 const EMPTY_FORM = {
   Concepto: "",
+  "Monto Original": "",
   "Monto USD": "",
+  Moneda: "USD",
   Fecha: new Date().toISOString().split("T")[0],
   Mes: MESES[new Date().getMonth()],
   "Categoría": "Insumos",
@@ -59,6 +78,9 @@ export default function GastosPage() {
   const [filterMes, setFilterMes] = useState("");
   const [filterCat, setFilterCat] = useState("");
 
+  // USD y Binance son 1:1 con USD — no hace falta campo extra
+  const isSameCurrency = form.Moneda === "USD" || form.Moneda === "Binance";
+
   const load = async () => {
     setLoading(true);
     let url = "/api/admin/gastos?";
@@ -72,13 +94,27 @@ export default function GastosPage() {
 
   useEffect(() => { load(); }, [filterMes, filterCat]);
 
+  // Sincronizar Monto USD cuando la moneda es USD o Binance
+  useEffect(() => {
+    if (isSameCurrency) {
+      setForm((f) => ({ ...f, "Monto USD": f["Monto Original"] }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form["Monto Original"], form.Moneda]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    const montoOriginal = parseFloat(form["Monto Original"] as string) || 0;
+    const montoUSD = isSameCurrency ? montoOriginal : (parseFloat(form["Monto USD"] as string) || 0);
     await fetch("/api/admin/gastos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, "Monto USD": parseFloat(form["Monto USD"] as string) || 0 }),
+      body: JSON.stringify({
+        ...form,
+        "Monto Original": montoOriginal,
+        "Monto USD": montoUSD,
+      }),
     });
     setForm(EMPTY_FORM);
     setShowForm(false);
@@ -113,7 +149,7 @@ export default function GastosPage() {
         <div>
           <h1 className="text-[#FAFAF9] text-2xl font-bold">Gastos</h1>
           <p className="text-[#A8A29E] text-sm mt-1">
-            Total pagado: <span className="text-[#FAFAF9] font-semibold">${totalFiltrado.toFixed(2)}</span>
+            Total pagado: <span className="text-[#FAFAF9] font-semibold">${totalFiltrado.toFixed(2)} USD</span>
           </p>
         </div>
         <div className="flex gap-2">
@@ -138,30 +174,81 @@ export default function GastosPage() {
         <form onSubmit={submit} className="bg-[#292524] border border-[#44403C] rounded-2xl p-5 space-y-4">
           <h2 className="text-[#FAFAF9] font-semibold text-sm">Registrar nuevo gasto</h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="col-span-2 lg:col-span-2">
+
+            {/* Concepto */}
+            <div className="col-span-2 lg:col-span-3">
               <label className="text-[#57534E] text-xs mb-1 block">Concepto *</label>
               <input
                 required
                 type="text"
-                placeholder="Ej: Ají caballero 2kg"
+                placeholder="Ej: Ají caballero 2kg, Etiquetas batch #3"
                 value={form.Concepto}
                 onChange={(e) => setForm((f) => ({ ...f, Concepto: e.target.value }))}
                 className="w-full bg-[#1C1917] border border-[#44403C] text-[#FAFAF9] placeholder-[#57534E] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#DC2626]"
               />
             </div>
+
+            {/* Moneda */}
             <div>
-              <label className="text-[#57534E] text-xs mb-1 block">Monto USD *</label>
-              <input
-                required
-                type="number"
-                min={0}
-                step={0.01}
-                placeholder="0.00"
-                value={form["Monto USD"]}
-                onChange={(e) => setForm((f) => ({ ...f, "Monto USD": e.target.value }))}
-                className="w-full bg-[#1C1917] border border-[#44403C] text-[#FAFAF9] placeholder-[#57534E] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#DC2626]"
-              />
+              <label className="text-[#57534E] text-xs mb-1 block">Moneda *</label>
+              <select
+                value={form.Moneda}
+                onChange={(e) => setForm((f) => ({ ...f, Moneda: e.target.value, "Monto USD": "" }))}
+                className="w-full bg-[#1C1917] border border-[#44403C] text-[#A8A29E] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#DC2626]"
+              >
+                {MONEDAS.map((m) => <option key={m}>{m}</option>)}
+              </select>
+              <p className="text-[#57534E] text-[10px] mt-1">
+                {form.Moneda === "USD" && "Dólares cash"}
+                {form.Moneda === "EUR" && "Euros — ingresa equiv. USD también"}
+                {form.Moneda === "Binance" && "USDT / cripto"}
+                {form.Moneda === "Bs" && "Bolívares — ingresa equiv. USD también"}
+              </p>
             </div>
+
+            {/* Monto Original */}
+            <div>
+              <label className="text-[#57534E] text-xs mb-1 block">
+                Monto en {form.Moneda} *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#57534E] text-sm">
+                  {monedaSymbol(form.Moneda)}
+                </span>
+                <input
+                  required
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="0.00"
+                  value={form["Monto Original"]}
+                  onChange={(e) => setForm((f) => ({ ...f, "Monto Original": e.target.value }))}
+                  className="w-full bg-[#1C1917] border border-[#44403C] text-[#FAFAF9] placeholder-[#57534E] rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-[#DC2626]"
+                />
+              </div>
+            </div>
+
+            {/* Equivalente USD — solo para EUR y Bs */}
+            {!isSameCurrency && (
+              <div>
+                <label className="text-[#57534E] text-xs mb-1 block">Equivalente USD *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#57534E] text-sm">$</span>
+                  <input
+                    required
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    placeholder="0.00"
+                    value={form["Monto USD"]}
+                    onChange={(e) => setForm((f) => ({ ...f, "Monto USD": e.target.value }))}
+                    className="w-full bg-[#1C1917] border border-[#44403C] text-[#FAFAF9] placeholder-[#57534E] rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-[#DC2626]"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Fecha */}
             <div>
               <label className="text-[#57534E] text-xs mb-1 block">Fecha</label>
               <input
@@ -171,6 +258,8 @@ export default function GastosPage() {
                 className="w-full bg-[#1C1917] border border-[#44403C] text-[#FAFAF9] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#DC2626]"
               />
             </div>
+
+            {/* Mes */}
             <div>
               <label className="text-[#57534E] text-xs mb-1 block">Mes</label>
               <select
@@ -181,6 +270,8 @@ export default function GastosPage() {
                 {MESES.map((m) => <option key={m}>{m}</option>)}
               </select>
             </div>
+
+            {/* Categoría */}
             <div>
               <label className="text-[#57534E] text-xs mb-1 block">Categoría</label>
               <select
@@ -191,6 +282,8 @@ export default function GastosPage() {
                 {CATEGORIAS.map((c) => <option key={c}>{c}</option>)}
               </select>
             </div>
+
+            {/* Estado */}
             <div>
               <label className="text-[#57534E] text-xs mb-1 block">Estado</label>
               <select
@@ -201,6 +294,8 @@ export default function GastosPage() {
                 {ESTADOS.map((e) => <option key={e}>{e}</option>)}
               </select>
             </div>
+
+            {/* Notas */}
             <div className="col-span-2">
               <label className="text-[#57534E] text-xs mb-1 block">Notas</label>
               <input
@@ -212,6 +307,7 @@ export default function GastosPage() {
               />
             </div>
           </div>
+
           <div className="flex gap-3">
             <button
               type="submit"
@@ -268,53 +364,70 @@ export default function GastosPage() {
               <thead>
                 <tr className="border-b border-[#44403C] text-[#57534E] text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-3">Concepto</th>
+                  <th className="text-left px-4 py-3">Moneda</th>
                   <th className="text-left px-4 py-3">Monto</th>
+                  <th className="text-left px-4 py-3">USD</th>
                   <th className="text-left px-4 py-3">Categoría</th>
                   <th className="text-left px-4 py-3">Estado</th>
                   <th className="text-left px-4 py-3">Fecha</th>
-                  <th className="text-left px-4 py-3">Mes</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#44403C]">
-                {gastos.map((g) => (
-                  <tr key={g.id} className="hover:bg-[#3C3835]/40 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="text-[#FAFAF9] font-medium">{g.fields.Concepto || "—"}</p>
-                      {g.fields.Notas && <p className="text-[#57534E] text-xs mt-0.5">{g.fields.Notas}</p>}
-                    </td>
-                    <td className="px-4 py-3 text-[#FAFAF9] font-semibold">
-                      ${(g.fields["Monto USD"] || 0).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${catColor(g.fields["Categoría"])}`}>
-                        {g.fields["Categoría"] || "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${estadoColor(g.fields.Estado)}`}>
-                        {g.fields.Estado || "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-[#A8A29E] whitespace-nowrap">
-                      {formatDate(g.fields.Fecha)}
-                    </td>
-                    <td className="px-4 py-3 text-[#57534E]">{g.fields.Mes || "—"}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => del(g.id)}
-                        disabled={deleting === g.id}
-                        className="text-[#57534E] hover:text-red-400 transition-colors p-1"
-                      >
-                        {deleting === g.id ? (
-                          <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Trash2 size={14} />
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {gastos.map((g) => {
+                  const moneda = g.fields.Moneda || "USD";
+                  const montoOrig = g.fields["Monto Original"] || g.fields["Monto USD"] || 0;
+                  const montoUSD = g.fields["Monto USD"] || 0;
+                  const isSame = moneda === "USD" || moneda === "Binance";
+                  return (
+                    <tr key={g.id} className="hover:bg-[#3C3835]/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="text-[#FAFAF9] font-medium">{g.fields.Concepto || "—"}</p>
+                        {g.fields.Notas && <p className="text-[#57534E] text-xs mt-0.5">{g.fields.Notas}</p>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-lg font-medium ${monedaColor(moneda)}`}>
+                          {moneda}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[#FAFAF9] font-semibold whitespace-nowrap">
+                        {monedaSymbol(moneda)}{montoOrig.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {isSame
+                          ? <span className="text-[#57534E] text-xs">—</span>
+                          : <span className="text-[#A8A29E] text-xs">${montoUSD.toFixed(2)}</span>
+                        }
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-lg font-medium ${catColor(g.fields["Categoría"])}`}>
+                          {g.fields["Categoría"] || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-lg font-medium ${estadoColor(g.fields.Estado)}`}>
+                          {g.fields.Estado || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[#A8A29E] whitespace-nowrap">
+                        {formatDate(g.fields.Fecha)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => del(g.id)}
+                          disabled={deleting === g.id}
+                          className="text-[#57534E] hover:text-red-400 transition-colors p-1"
+                        >
+                          {deleting === g.id ? (
+                            <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
