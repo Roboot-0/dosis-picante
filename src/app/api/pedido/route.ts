@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { items, form, payment, tasaBCV, montoBS, comprobante, cupon } = body as {
-      items: Array<{ sku?: string; nombre: string; qty: number; precio?: number; subtotal: number }>;
+      items: Array<{ id?: string; sku?: string; nombre: string; qty: number; precio?: number; subtotal: number }>;
       form: Record<string, string>; payment: string;
       tasaBCV?: number; montoBS?: number;
       comprobante?: { base64: string; mimeType: string; nombre: string } | null;
@@ -166,11 +166,13 @@ export async function POST(req: NextRequest) {
     }
     let total = 0;
     for (const item of items) {
-      const sku = (item.sku || "").toLowerCase();
-      const precioUnitario = PRECIOS[sku];
+      // Usamos item.id (ej. "microdosis") como clave primaria de validación de precio.
+      // item.sku puede venir en formato corto "MI-01" — se conserva para Airtable.
+      const lookup = (item.id || item.sku || "").toLowerCase();
+      const precioUnitario = PRECIOS[lookup];
       if (precioUnitario === undefined) {
-        logDebug(`WARN: SKU desconocido "${sku}" — rechazando pedido`);
-        return NextResponse.json({ ok: false, error: `Producto desconocido: ${sku}` }, { status: 400 });
+        logDebug(`WARN: producto desconocido id="${lookup}" sku="${item.sku}" — rechazando pedido`);
+        return NextResponse.json({ ok: false, error: `Producto desconocido: ${lookup}` }, { status: 400 });
       }
       const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
       total += precioUnitario * qty;
