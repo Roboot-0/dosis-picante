@@ -4,7 +4,7 @@
  */
 
 const COOKIE_NAME = "dosis-admin-session";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 días
+const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 horas
 
 function getSecret(): string {
   const secret = process.env.ADMIN_SECRET || process.env.AIRTABLE_API_KEY;
