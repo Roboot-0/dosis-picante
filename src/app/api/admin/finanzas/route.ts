@@ -28,7 +28,7 @@ async function fetchAll(url: string): Promise<unknown[]> {
 export async function GET() {
   const [pedidos, gastos, produccion] = await Promise.all([
     fetchAll(`${AIRTABLE_API}/${BASE_ID}/${TBL_PEDIDOS}?fields[]=Total USD&fields[]=Fecha&fields[]=Estado Pago&pageSize=100`),
-    fetchAll(`${AIRTABLE_API}/${BASE_ID}/${TBL_GASTOS}?fields[]=Monto USD&fields[]=Fecha&fields[]=Categoría&fields[]=Estado&fields[]=Concepto&pageSize=100`),
+    fetchAll(`${AIRTABLE_API}/${BASE_ID}/${TBL_GASTOS}?fields[]=Monto USD&fields[]=Fecha&fields[]=Categoría&fields[]=Estado&fields[]=Concepto&fields[]=Moneda PNL&pageSize=100`),
     fetchAll(`${AIRTABLE_API}/${BASE_ID}/${TBL_PRODUCCION}?fields[]=Costo Total USD&fields[]=Fecha&fields[]=SKU&fields[]=Unidades Producidas&fields[]=Estado&pageSize=100`),
   ]);
 

@@ -9,7 +9,7 @@ interface PedidoRec {
 }
 interface GastoRec {
   id: string;
-  fields: { "Monto USD"?: number; Fecha?: string; "Categoría"?: string; Estado?: string; Concepto?: string };
+  fields: { "Monto USD"?: number; Fecha?: string; "Categoría"?: string; Estado?: string; Concepto?: string; "Moneda PNL"?: string };
 }
 interface ProduccionRec {
   id: string;
@@ -89,6 +89,10 @@ export default function FinanzasPage() {
     );
     const gastosTotal = gastosFiltrados.reduce((s, g) => s + (g.fields["Monto USD"] || 0), 0);
 
+    // Split BCV vs Binance
+    const gastosBCV      = gastosFiltrados.filter((g) => g.fields["Moneda PNL"] !== "Binance").reduce((s, g) => s + (g.fields["Monto USD"] || 0), 0);
+    const gastosBinance  = gastosFiltrados.filter((g) => g.fields["Moneda PNL"] === "Binance").reduce((s, g) => s + (g.fields["Monto USD"] || 0), 0);
+
     // Gastos por categoría
     const gastosPorCat: Record<string, number> = {};
     for (const g of gastosFiltrados) {
@@ -114,6 +118,7 @@ export default function FinanzasPage() {
     return {
       ingresos, cogs, margenBruto, gastosTotal, utilidadNeta,
       margenPct, roi, gastosPorCat, ventasPorSKU,
+      gastosBCV, gastosBinance,
       pedidosCount: pedidosFiltrados.length, unidadesProducidas,
     };
   }, [data, filterMes]);
@@ -181,6 +186,27 @@ export default function FinanzasPage() {
                   {plRow("Total Gastos Op.", -metrics.gastosTotal, false, true)}
                 </div>
                 {plRow("UTILIDAD NETA", metrics.utilidadNeta, false, true, metrics.utilidadNeta >= 0)}
+              </div>
+
+              {/* Split BCV vs Binance */}
+              <div className="mt-4 pt-4 border-t border-[#44403C]">
+                <p className="text-[#57534E] text-xs uppercase tracking-wider mb-3">Gastos por Fuente de Pago</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-[#1C1917] border border-[#44403C] rounded-xl p-3">
+                    <p className="text-[#57534E] text-xs mb-1">🏦 USD BCV</p>
+                    <p className="text-[#FAFAF9] text-lg font-bold">${metrics.gastosBCV.toFixed(2)}</p>
+                    <p className="text-[#57534E] text-xs mt-0.5">
+                      {metrics.gastosTotal > 0 ? ((metrics.gastosBCV / metrics.gastosTotal) * 100).toFixed(0) : 0}% del total
+                    </p>
+                  </div>
+                  <div className="bg-[#1C1917] border border-[#44403C] rounded-xl p-3">
+                    <p className="text-[#57534E] text-xs mb-1">⚡ Binance USDT</p>
+                    <p className="text-[#FAFAF9] text-lg font-bold">${metrics.gastosBinance.toFixed(2)}</p>
+                    <p className="text-[#57534E] text-xs mt-0.5">
+                      {metrics.gastosTotal > 0 ? ((metrics.gastosBinance / metrics.gastosTotal) * 100).toFixed(0) : 0}% del total
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Métricas clave */}
