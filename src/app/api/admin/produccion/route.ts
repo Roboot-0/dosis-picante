@@ -22,12 +22,12 @@ const EMPAQUE_ITEMS = [
 // Airtable sólo acepta sus opciones existentes. Remapeamos en ambas direcciones.
 // "En proceso"  → Fermentando   (batch en fermentación)
 // "Completado"  → Embotellado   (batch listo y embotellado)
-export function uiToDb(estado: string): string {
+function uiToDb(estado: string): string {
   if (estado === "Fermentando") return "En proceso";
   if (estado === "Embotellado") return "Completado";
   return estado;
 }
-export function dbToUi(estado: string): string {
+function dbToUi(estado: string): string {
   if (estado === "En proceso") return "Fermentando";
   if (estado === "Completado") return "Embotellado";
   return estado;
@@ -36,12 +36,12 @@ export function dbToUi(estado: string): string {
 // ── Fecha Embotellado en Notas ───────────────────────────────────────────────
 // Formato: "[emb:2026-05-15] texto libre"
 // Si no hay fecha embotellada, Notas es sólo texto libre.
-export function encodeNotas(fechaEmb: string | null, notas: string): string {
+function encodeNotas(fechaEmb: string | null, notas: string): string {
   if (!fechaEmb) return notas || "";
   return `[emb:${fechaEmb}]${notas ? " " + notas : ""}`;
 }
-export function decodeNotas(raw: string): { fechaEmb: string | null; notas: string } {
-  const match = raw?.match(/^\[emb:(\d{4}-\d{2}-\d{2})\]\s*(.*)/s);
+function decodeNotas(raw: string): { fechaEmb: string | null; notas: string } {
+  const match = raw?.match(/^\[emb:(\d{4}-\d{2}-\d{2})\]\s*([\s\S]*)/);
   if (match) return { fechaEmb: match[1], notas: match[2].trim() };
   return { fechaEmb: null, notas: raw || "" };
 }
