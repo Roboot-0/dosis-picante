@@ -97,7 +97,7 @@ export default function GastosPage() {
     const n = parseFloat(montoOrig);
     if (!n || n <= 0) return "";
     if (moneda === "Binance") return n.toFixed(2);
-    if (!t) return "";
+    if (!t || !t.usd_bs || !t.eur_bs) return "";
     if (moneda === "Bs BCV")  return (n / t.usd_bs).toFixed(2);
     if (moneda === "EUR BCV") return ((n * t.eur_bs) / t.usd_bs).toFixed(2);
     return "";
@@ -235,9 +235,9 @@ export default function GastosPage() {
               ) : tasas ? (
                 <>
                   <span className="text-[#57534E] text-xs">BCV hoy</span>
-                  <span className="text-[#FAFAF9] text-xs font-semibold">$1 = Bs {tasas.usd_bs.toFixed(2)}</span>
+                  <span className="text-[#FAFAF9] text-xs font-semibold">$1 = Bs {tasas.usd_bs != null ? tasas.usd_bs.toFixed(2) : '—'}</span>
                   <span className="text-[#44403C]">·</span>
-                  <span className="text-[#FAFAF9] text-xs font-semibold">€1 = Bs {tasas.eur_bs.toFixed(2)}</span>
+                  <span className="text-[#FAFAF9] text-xs font-semibold">€1 = Bs {tasas.eur_bs != null ? tasas.eur_bs.toFixed(2) : '—'}</span>
                   <span className="text-[#44403C]">·</span>
                   <span className="text-[#57534E] text-xs">{tasas.fecha}</span>
                 </>

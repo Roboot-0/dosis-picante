@@ -34,6 +34,12 @@ export async function GET() {
     const tasaEur = parseFloat(dataEur.promedio);
     const fecha = dataUsd.fechaActualizacion;
 
+    // Si las tasas son NaN (parseFloat de valor inválido), JSON.stringify las
+    // convertiría a null y causaría null.toFixed() crash en el cliente.
+    if (!isFinite(tasaUsd) || tasaUsd <= 0 || !isFinite(tasaEur) || tasaEur <= 0) {
+      throw new Error(`Tasas inválidas: USD=${tasaUsd} EUR=${tasaEur}`);
+    }
+
     cache = { usd: tasaUsd, eur: tasaEur, fecha, ts: Date.now() };
 
     return NextResponse.json({
