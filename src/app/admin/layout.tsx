@@ -11,6 +11,7 @@ import {
   FlaskConical,
   Leaf,
   DollarSign,
+  BarChart2,
   LogOut,
   Menu,
   X,
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/admin/produccion", label: "Producción", icon: FlaskConical },
   { href: "/admin/ingredientes", label: "Ingredientes", icon: Leaf },
   { href: "/admin/finanzas", label: "Finanzas & P&L", icon: DollarSign },
+  { href: "/admin/metricas", label: "Métricas web", icon: BarChart2 },
 ];
 
 function NavItem({
