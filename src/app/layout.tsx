@@ -22,7 +22,7 @@ const source = Source_Sans_3({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.dosispicante.com"),
   title: {
-    default: "Dosis Picante — Salsas Artesanales que Queman Diferente",
+    default: "Dosis Picante — Salsas Picantes Gourmet. Experimenta el Picor.",
     template: "%s | Dosis Picante",
   },
   description:
@@ -44,9 +44,9 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "Dosis Picante — Salsas Artesanales que Queman Diferente",
+    title: "Dosis Picante — Salsas Picantes Gourmet. Experimenta el Picor.",
     description:
-      "Salsas picantes fermentadas naturalmente en Caracas. Gota a gota. No es solo picante, es una experiencia.",
+      "Salsas picantes gourmet fermentadas artesanalmente en Caracas. Microdosis, Ahumadosis y Sobredosis. Experimenta el picor.",
     url: "https://www.dosispicante.com",
     siteName: "Dosis Picante",
     type: "website",
@@ -62,9 +62,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dosis Picante — Salsas Artesanales",
+    title: "Dosis Picante — Salsas Picantes Gourmet. Experimenta el Picor.",
     description:
-      "Salsas picantes fermentadas naturalmente en Caracas. Gota a gota.",
+      "Salsas picantes gourmet fermentadas artesanalmente en Caracas. Experimenta el picor.",
     images: ["/og-image.jpg"],
   },
   icons: {
