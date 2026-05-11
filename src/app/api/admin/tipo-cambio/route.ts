@@ -27,17 +27,21 @@ export async function GET() {
     if (!resUsd.ok) throw new Error(`USD HTTP ${resUsd.status}`);
     if (!resEur.ok) throw new Error(`EUR HTTP ${resEur.status}`);
 
-    const dataUsd = await resUsd.json() as { promedio: string; fechaActualizacion: string };
-    const dataEur = await resEur.json() as { promedio: string; fechaActualizacion: string };
+    // USD: respuesta es un objeto  { promedio: number, fechaActualizacion: string, ... }
+    const dataUsd = await resUsd.json() as { promedio: number; fechaActualizacion: string };
 
-    const tasaUsd = parseFloat(dataUsd.promedio);
-    const tasaEur = parseFloat(dataEur.promedio);
-    const fecha = dataUsd.fechaActualizacion;
+    // EUR: respuesta es un ARRAY   [{ fuente: "oficial", promedio: number }, { fuente: "paralelo", ... }]
+    const dataEurArr = await resEur.json() as Array<{ fuente: string; promedio: number; fechaActualizacion: string }>;
+    const dataEur = Array.isArray(dataEurArr)
+      ? dataEurArr.find(r => r.fuente === "oficial") ?? dataEurArr[0]
+      : dataEurArr as unknown as { promedio: number; fechaActualizacion: string };
 
-    // Si las tasas son NaN (parseFloat de valor inválido), JSON.stringify las
-    // convertiría a null y causaría null.toFixed() crash en el cliente.
+    const tasaUsd = Number(dataUsd.promedio);
+    const tasaEur = Number(dataEur?.promedio);
+    const fecha = dataUsd.fechaActualizacion ?? new Date().toISOString();
+
     if (!isFinite(tasaUsd) || tasaUsd <= 0 || !isFinite(tasaEur) || tasaEur <= 0) {
-      throw new Error(`Tasas inválidas: USD=${tasaUsd} EUR=${tasaEur}`);
+      throw new Error(`Tasas inválidas de dolarapi: USD=${tasaUsd} EUR=${tasaEur}`);
     }
 
     cache = { usd: tasaUsd, eur: tasaEur, fecha, ts: Date.now() };
