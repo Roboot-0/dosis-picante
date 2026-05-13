@@ -1,0 +1,39 @@
+[2026-04-11T18:06:41.849Z] ===== NUEVO PEDIDO =====
+[2026-04-11T18:06:41.854Z] GMAIL_USER presente: true | GMAIL_PASS presente: true (len=16)
+[2026-04-11T18:06:41.870Z] Body recibido: sghh - total $5 - 1 items - comprobante: sí
+[2026-04-11T18:06:41.914Z] Transporter creado, intentando sendMail...
+[2026-04-11T18:07:51.083Z] ERROR en POST /api/pedido: queryA ETIMEOUT smtp.gmail.com
+[2026-04-11T18:07:51.085Z] Stack: Error: queryA ETIMEOUT smtp.gmail.com
+    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/callback_resolver:45:19)
+[2026-04-11T18:22:38.207Z] ===== NUEVO PEDIDO (Resend) =====
+[2026-04-11T18:22:38.210Z] RESEND_API_KEY presente: true (len=36)
+[2026-04-11T18:22:38.224Z] Body recibido: sdgsg - total $5 - 1 items - comprobante: sí
+[2026-04-11T18:22:38.242Z] Llamando a Resend.emails.send...
+[2026-04-11T18:22:40.664Z] Resend OK. id=0a81c915-eda9-4a83-8c98-3ce3a760fd88
+[2026-04-11T22:53:57.695Z] ===== NUEVO PEDIDO (Resend) =====
+[2026-04-11T22:53:57.707Z] RESEND_API_KEY presente: true (len=36)
+[2026-04-11T22:53:57.726Z] Body recibido: vbfbfg - total $12 - 1 items - comprobante: sí
+[2026-04-11T22:53:57.819Z] Llamando a Resend.emails.send (admin)...
+[2026-04-11T22:54:00.071Z] Resend OK (admin). id=f1377e9f-8aae-43a3-8eed-3aba27be39ad
+[2026-04-11T22:54:00.074Z] Enviando confirmación al cliente (raulsds@gmail.com)...
+[2026-04-11T22:54:01.110Z] WARN: falló correo al cliente: {"statusCode":403,"name":"validation_error","message":"You can only send testing emails to your own email address (dosispicante@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."}
+[2026-04-11T22:54:01.124Z] Cliente guardado en data/clientes.csv
+[2026-04-11T23:26:41.771Z] ===== NUEVO PEDIDO (Resend) =====
+[2026-04-11T23:26:41.775Z] RESEND_API_KEY presente: true (len=36)
+[2026-04-11T23:26:41.787Z] Body recibido: raul silva - total $20 - 1 items - comprobante: sí
+[2026-04-11T23:26:41.816Z] Llamando a Resend.emails.send (admin)...
+[2026-04-11T23:26:43.445Z] Resend OK (admin). id=52d5fbad-bc50-4548-b014-85540564d4d7
+[2026-04-11T23:26:43.447Z] Enviando confirmación al cliente (raulsds@gmail.com)...
+[2026-04-11T23:26:44.782Z] WARN: falló correo al cliente: {"statusCode":403,"name":"validation_error","message":"You can only send testing emails to your own email address (dosispicante@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain."}
+[2026-04-11T23:26:44.800Z] Cliente guardado en data/clientes.csv
+[2026-04-11T23:26:48.841Z] WARN Airtable falló (pedido igual aceptado): Airtable 422 Unprocessable Entity: {"error":{"type":"ROW_DOES_NOT_EXIST","message":"Record ID recPe2HAfwJGxMDHP does not exist"}}
+[2026-04-11T23:54:46.789Z] ===== NUEVO PEDIDO (Resend) =====
+[2026-04-11T23:54:46.792Z] RESEND_API_KEY presente: true (len=36)
+[2026-04-11T23:54:46.801Z] Body recibido: raul - total $5 - 1 items - comprobante: sí
+[2026-04-11T23:54:46.821Z] Llamando a Resend.emails.send (admin)...
+[2026-04-11T23:54:48.995Z] Resend OK (admin). id=bd007f35-2d71-41e8-96f3-e733323fde57
+[2026-04-11T23:54:48.997Z] Modo test: confirmación del cliente redirigida a dosispicante@gmail.com (original: raulsds@gmail.com)
+[2026-04-11T23:54:49.000Z] Enviando confirmación al cliente (dosispicante@gmail.com)...
+[2026-04-11T23:54:50.372Z] Resend OK (cliente). id=16b00a43-7d60-4a26-b137-cc39769f24d5
+[2026-04-11T23:54:50.384Z] Cliente guardado en data/clientes.csv
+[2026-04-11T23:54:53.349Z] Airtable OK. idPedido=DOSIS-20260411-EU9 clienteId=recWgEqccD2OqPcdf
