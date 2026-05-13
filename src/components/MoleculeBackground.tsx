@@ -92,7 +92,7 @@ export default function MoleculeBackground() {
       0.1,
       300
     );
-    camera.position.set(0, 0, isMobile ? 34 : 24);
+    camera.position.set(0, 1.5, isMobile ? 28 : 19);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping   = true;
@@ -105,7 +105,7 @@ export default function MoleculeBackground() {
     controls.enablePan       = false;
     controls.minPolarAngle   = Math.PI * 0.15;
     controls.maxPolarAngle   = Math.PI * 0.85;
-    controls.target.set(0, 0, 0);
+    controls.target.set(0, 1.5, 0);
     controls.update();
 
     scene.add(new THREE.AmbientLight(0x1a2440, 1.2));
@@ -139,14 +139,13 @@ export default function MoleculeBackground() {
     ATOMS.forEach(a => cen.add(new THREE.Vector3(...a.pos)));
     cen.divideScalar(ATOMS.length);
 
-    const matC = new THREE.MeshPhysicalMaterial({
-      color: 0xb0b0c8,
-      roughness: 0.04,
-      metalness: 1.0,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
-      reflectivity: 1.0,
-    } as THREE.MeshPhysicalMaterialParameters);
+    const matC = new THREE.MeshStandardMaterial({
+      color: 0xc8c8dc,
+      roughness: 0.12,
+      metalness: 0.82,
+      emissive: new THREE.Color(0x1a1a2e),
+      emissiveIntensity: 0.3,
+    });
 
     function hotMat(col: number, em: number, ei: number) {
       return new THREE.MeshStandardMaterial({
@@ -205,13 +204,13 @@ export default function MoleculeBackground() {
       redEmber.position.copy(oc);
     }
 
-    const bondMat = new THREE.MeshPhysicalMaterial({
-      color: 0x909098,
-      roughness: 0.06,
-      metalness: 1.0,
-      clearcoat: 0.8,
-      clearcoatRoughness: 0.08,
-    } as THREE.MeshPhysicalMaterialParameters);
+    const bondMat = new THREE.MeshStandardMaterial({
+      color: 0xa0a0b8,
+      roughness: 0.15,
+      metalness: 0.78,
+      emissive: new THREE.Color(0x111122),
+      emissiveIntensity: 0.2,
+    });
     const BOND_R = 0.068;
     const DBL_OFF = 0.12;
     const CYL_SEG = isMobile ? 6 : 10;

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import MoleculeBackground from "@/components/MoleculeBackground";
 
@@ -47,35 +48,29 @@ export default function Hero() {
       />
 
       {/* ── LOGO — overlay HTML fijo, no rota con la molécula ── */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-[5] pointer-events-none">
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-[5] pointer-events-none" style={{ paddingBottom: "18vh" }}>
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 1.1 }}
-          className="text-center select-none"
+          className="select-none"
+          style={{
+            filter: "drop-shadow(0 0 60px rgba(220,38,38,0.28)) drop-shadow(0 0 20px rgba(220,38,38,0.12))",
+          }}
         >
-          <p className="font-mono text-[8px] md:text-[9px] tracking-[0.55em] text-crema/25 uppercase mb-3">
-            Capsaicina venezolana
-          </p>
-
-          <h1
-            className="font-bebas text-[6rem] md:text-[10rem] lg:text-[12rem] leading-none tracking-[0.3em] text-crema uppercase"
-            style={{
-              textShadow:
-                "0 0 100px rgba(220,38,38,0.30), 0 0 30px rgba(220,38,38,0.12), 0 2px 4px rgba(0,0,0,0.8)",
-            }}
-          >
-            DOSIS
-          </h1>
-
-          <p className="font-mono text-[8px] md:text-[9px] tracking-[0.5em] text-crema/20 uppercase mt-2">
-            Salsas artesanales · Edición limitada
-          </p>
+          <Image
+            src="/images/logo-transparent.png"
+            alt="DOSIS"
+            width={340}
+            height={190}
+            priority
+            className="w-[220px] md:w-[300px] lg:w-[340px] h-auto"
+          />
         </motion.div>
       </div>
 
       {/* ── LIFESTYLE CARDS — tercio inferior ── */}
-      <div className="absolute bottom-28 md:bottom-32 left-0 right-0 z-[7] pointer-events-none px-5 md:px-8">
+      <div className="absolute bottom-20 md:bottom-24 left-0 right-0 z-[7] pointer-events-none px-5 md:px-8">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -129,15 +124,6 @@ export default function Hero() {
         className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center gap-4 pb-8 pt-6"
         style={{ pointerEvents: "none" }}
       >
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.8, duration: 1 }}
-          className="font-mono text-[8px] tracking-[0.45em] text-crema/18 uppercase"
-        >
-          Arrastra · Gira · Explora
-        </motion.p>
-
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
