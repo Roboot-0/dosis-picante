@@ -92,20 +92,19 @@ export default function MoleculeBackground() {
       0.1,
       300
     );
-    camera.position.set(0, 1.5, isMobile ? 28 : 19);
+    camera.position.set(0, 0, isMobile ? 24 : 30);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping   = true;
     controls.dampingFactor   = 0.06;
     controls.autoRotate      = true;
     controls.autoRotateSpeed = 0.7;
-    controls.enableZoom      = true;
-    controls.minDistance     = isMobile ? 12 : 8;
-    controls.maxDistance     = isMobile ? 50 : 38;
+    controls.enableZoom      = false;
+    controls.mouseButtons    = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN } as typeof controls.mouseButtons;
     controls.enablePan       = false;
     controls.minPolarAngle   = Math.PI * 0.15;
     controls.maxPolarAngle   = Math.PI * 0.85;
-    controls.target.set(0, 1.5, 0);
+    controls.target.set(0, -0.5, 0);
     controls.update();
 
     scene.add(new THREE.AmbientLight(0x1a2440, 1.2));
@@ -140,11 +139,11 @@ export default function MoleculeBackground() {
     cen.divideScalar(ATOMS.length);
 
     const matC = new THREE.MeshStandardMaterial({
-      color: 0xc8c8dc,
-      roughness: 0.12,
-      metalness: 0.82,
-      emissive: new THREE.Color(0x1a1a2e),
-      emissiveIntensity: 0.3,
+      color: 0xd2d4e8,
+      roughness: 0.28,
+      metalness: 0.0,
+      emissive: new THREE.Color(0x505878),
+      emissiveIntensity: 0.55,
     });
 
     function hotMat(col: number, em: number, ei: number) {
@@ -205,11 +204,11 @@ export default function MoleculeBackground() {
     }
 
     const bondMat = new THREE.MeshStandardMaterial({
-      color: 0xa0a0b8,
-      roughness: 0.15,
-      metalness: 0.78,
-      emissive: new THREE.Color(0x111122),
-      emissiveIntensity: 0.2,
+      color: 0xb8bcd2,
+      roughness: 0.32,
+      metalness: 0.0,
+      emissive: new THREE.Color(0x3c4060),
+      emissiveIntensity: 0.45,
     });
     const BOND_R = 0.068;
     const DBL_OFF = 0.12;
@@ -242,7 +241,22 @@ export default function MoleculeBackground() {
 
     mol.rotation.x = Math.PI * 0.14;
     mol.rotation.z = -Math.PI * 0.06;
-    scene.add(mol);
+
+    let mol2: THREE.Group | null = null;
+    if (isMobile) {
+      // Móvil: una sola molécula centrada, más pequeña
+      mol.position.set(0, 0, 0);
+      mol.scale.setScalar(0.75);
+      scene.add(mol);
+    } else {
+      // Desktop: dos moléculas a los lados
+      mol.position.set(-7.5, 0, 0);
+      scene.add(mol);
+      mol2 = mol.clone(true);
+      mol2.position.set(7.5, 0, 0);
+      mol2.rotation.y = Math.PI * 0.35;
+      scene.add(mol2);
+    }
 
     function makeParticles(count: number, spread: number, size: number, color: number, opacity: number) {
       const pos = new Float32Array(count * 3);
@@ -302,6 +316,9 @@ export default function MoleculeBackground() {
           sp.userData.baseOpacity +
           (isO ? 0.22 : 0.18) * Math.sin(t * 1.2 + (isO ? 0 : 0.8));
       });
+
+      // Rotar mol2 levemente (solo desktop)
+      if (mol2) mol2.rotation.y += 0.003;
 
       controls.update();
       renderer.render(scene, camera);

@@ -47,30 +47,30 @@ export default function Hero() {
         aria-hidden="true"
       />
 
-      {/* ── LOGO — overlay HTML fijo, no rota con la molécula ── */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-[5] pointer-events-none" style={{ paddingBottom: "18vh" }}>
+      {/* ── LOGO — overlay HTML fijo, centrado ── */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-[5] pointer-events-none" style={{ paddingBottom: "26vh" }}>
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 1.1 }}
           className="select-none"
           style={{
-            filter: "drop-shadow(0 0 60px rgba(220,38,38,0.28)) drop-shadow(0 0 20px rgba(220,38,38,0.12))",
+            filter: "drop-shadow(0 0 80px rgba(220,38,38,0.32)) drop-shadow(0 0 30px rgba(220,38,38,0.15))",
           }}
         >
           <Image
             src="/images/logo-transparent.png"
             alt="DOSIS"
-            width={340}
-            height={190}
+            width={480}
+            height={268}
             priority
-            className="w-[220px] md:w-[300px] lg:w-[340px] h-auto"
+            className="w-[280px] md:w-[400px] lg:w-[480px] h-auto"
           />
         </motion.div>
       </div>
 
-      {/* ── LIFESTYLE CARDS — tercio inferior ── */}
-      <div className="absolute bottom-20 md:bottom-24 left-0 right-0 z-[7] pointer-events-none px-5 md:px-8">
+      {/* ── LIFESTYLE CARDS — zona inferior ── */}
+      <div className="absolute bottom-28 md:bottom-32 left-0 right-0 z-[7] pointer-events-none px-5 md:px-8">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -121,7 +121,7 @@ export default function Hero() {
 
       {/* ── PIE DEL HERO — botones ── */}
       <div
-        className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center gap-4 pb-8 pt-6"
+        className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center gap-4 pb-10 pt-4"
         style={{ pointerEvents: "none" }}
       >
         <motion.div
