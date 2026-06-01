@@ -18,7 +18,7 @@ export default function Footer() {
           </div>
 
           {/* Links */}
-          <nav className="flex gap-8">
+          <nav className="flex flex-wrap justify-center gap-x-8 gap-y-3">
             {[
               { label: "Salsas", href: "/salsas" },
               { label: "Historia", href: "/historia" },

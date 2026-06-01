@@ -3,6 +3,7 @@
 import { motion, useInView, useScroll, useTransform, animate } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
 import MoleculaFondo from "@/components/MoleculaFondo";
+import MoleculeBackground from "@/components/MoleculeBackground";
 
 // Escala Scoville — proporciones normalizadas vs Carolina Reaper (récord Guinness 2013, ~2.2M SHU)
 const comparacion = [
@@ -228,21 +229,22 @@ export default function Ciencia() {
               </div>
             </motion.div>
 
-            {/* Molécula animada */}
+            {/* Molécula 3D interactiva */}
             <motion.div
               initial={{ opacity: 0, x: 40 }}
               animate={inView ? { opacity: 1, x: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.3 }}
               className="flex flex-col items-center gap-8"
             >
-              <div className="relative w-full">
-                <div className="absolute inset-0"
-                  style={{ background: "radial-gradient(ellipse 80% 60% at 50% 50%, #DC262615, transparent)" }} />
-                <MoleculaSVG />
+              <div
+                className="relative w-full overflow-hidden"
+                style={{ height: "380px" }}
+              >
+                <MoleculeBackground single />
               </div>
               <div className="text-center">
                 <p className="font-mono text-xs tracking-[0.3em] text-crema/35 uppercase">
-                  Estructura molecular de la capsaicina
+                  Estructura molecular de la capsaicina · arrastra para girar
                 </p>
                 <p className="font-mono text-[10px] tracking-[0.25em] text-crema/20 uppercase mt-1">
                   C₁₈H₂₇NO₃
@@ -250,15 +252,15 @@ export default function Ciencia() {
               </div>
 
               {/* Stats rápidos */}
-              <div className="grid grid-cols-3 gap-4 w-full">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 w-full">
                 {[
-                  { val: "43°C", label: "Temp. que activa TRPV1" },
-                  { val: "120m/s", label: "Velocidad del nervio" },
-                  { val: "16M", label: "SHU cápsaicina pura" },
+                  { val: "43°C", label: "Temp. TRPV1" },
+                  { val: "120m/s", label: "Vel. del nervio" },
+                  { val: "16M", label: "SHU pura" },
                 ].map((s) => (
-                  <div key={s.label} className="border border-carbon-medio p-4 text-center bg-carbon-claro">
-                    <p className="font-bebas text-2xl text-rojo mb-1">{s.val}</p>
-                    <p className="font-mono text-[9px] text-crema/30 tracking-wider leading-tight">{s.label}</p>
+                  <div key={s.label} className="border border-carbon-medio p-3 sm:p-4 text-center bg-carbon-claro">
+                    <p className="font-bebas text-xl sm:text-2xl text-rojo mb-1">{s.val}</p>
+                    <p className="font-mono text-[8px] sm:text-[9px] text-crema/30 tracking-wider leading-tight">{s.label}</p>
                   </div>
                 ))}
               </div>

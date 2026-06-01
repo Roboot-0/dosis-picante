@@ -61,7 +61,7 @@ function makeGlowTexture(r: number, g: number, b: number): THREE.CanvasTexture {
   return new THREE.CanvasTexture(cv);
 }
 
-export default function MoleculeBackground() {
+export default function MoleculeBackground({ single = false }: { single?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,6 +69,7 @@ export default function MoleculeBackground() {
     if (!container || typeof window === "undefined") return;
 
     const isMobile = window.innerWidth < 768;
+    const singleMode = single || isMobile;
 
     const renderer = new THREE.WebGLRenderer({
       antialias: !isMobile,
@@ -92,7 +93,7 @@ export default function MoleculeBackground() {
       0.1,
       300
     );
-    camera.position.set(0, 0, isMobile ? 24 : 30);
+    camera.position.set(0, 0, isMobile ? 24 : (single ? 20 : 30));
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping   = true;
@@ -243,10 +244,10 @@ export default function MoleculeBackground() {
     mol.rotation.z = -Math.PI * 0.06;
 
     let mol2: THREE.Group | null = null;
-    if (isMobile) {
-      // Móvil: una sola molécula centrada, más pequeña
+    if (singleMode) {
+      // Móvil o modo single: una sola molécula centrada
       mol.position.set(0, 0, 0);
-      mol.scale.setScalar(0.75);
+      mol.scale.setScalar(isMobile ? 0.75 : 0.9);
       scene.add(mol);
     } else {
       // Desktop: dos moléculas a los lados
@@ -348,7 +349,7 @@ export default function MoleculeBackground() {
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [single]);
 
   return (
     <div

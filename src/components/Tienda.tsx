@@ -147,12 +147,12 @@ function StepCarrito({
                 <p className="text-[10px] text-crema/30 font-sans">{p.ml} · <span className="text-crema/50">${p.precio}</span></p>
                 <Dots nivel={p.nivel} color={p.color} />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <button onClick={() => update(p.id, -1)} disabled={qty === 0}
-                  className="w-6 h-6 border border-carbon-medio flex items-center justify-center text-crema/40 hover:border-rojo hover:text-rojo disabled:opacity-20 disabled:cursor-not-allowed transition-all font-mono text-sm leading-none">−</button>
-                <span className="font-bebas text-lg w-4 text-center text-crema tabular-nums">{qty}</span>
+                  className="w-10 h-10 border border-carbon-medio flex items-center justify-center text-crema/40 hover:border-rojo hover:text-rojo disabled:opacity-20 disabled:cursor-not-allowed transition-all font-mono text-base leading-none">−</button>
+                <span className="font-bebas text-lg w-6 text-center text-crema tabular-nums">{qty}</span>
                 <button onClick={() => update(p.id, 1)}
-                  className="w-6 h-6 border border-carbon-medio flex items-center justify-center text-crema/40 hover:border-rojo hover:text-rojo transition-all font-mono text-sm leading-none">+</button>
+                  className="w-10 h-10 border border-carbon-medio flex items-center justify-center text-crema/40 hover:border-rojo hover:text-rojo transition-all font-mono text-base leading-none">+</button>
               </div>
             </div>
           );
@@ -649,22 +649,23 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
         role="dialog" aria-modal="true" aria-labelledby="tienda-modal-title"
         initial={{ opacity: 0, y: 32, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 16, scale: 0.97 }} transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-md bg-carbon border border-carbon-medio shadow-2xl"
+        className="relative w-full max-w-md bg-carbon border border-carbon-medio shadow-2xl flex flex-col"
+        style={{ maxHeight: "calc(100svh - 2rem)" }}
         onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-carbon-medio">
+        {/* Header — fijo */}
+        <div className="flex-shrink-0 flex items-center justify-between px-5 py-3.5 border-b border-carbon-medio">
           <div className="flex items-center gap-2.5">
             <span id="tienda-modal-title" className="font-bebas text-lg tracking-[0.2em] text-crema">DOSIS</span>
             <span className="text-crema/20 font-mono text-xs">·</span>
             <span className="text-[10px] tracking-[0.3em] text-crema/35 font-mono uppercase">Tu pedido</span>
           </div>
           <button onClick={() => { if (step > 1 && step < totalSteps) trackCheckoutAbandoned(step); onClose(); }}
-            className="w-7 h-7 flex items-center justify-center text-crema/25 hover:text-crema hover:bg-carbon-medio transition-all" aria-label="Cerrar">
+            className="w-10 h-10 flex items-center justify-center text-crema/25 hover:text-crema hover:bg-carbon-medio transition-all" aria-label="Cerrar">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
           </button>
         </div>
-        {/* Contenido */}
-        <div className="px-5 py-4">
+        {/* Contenido — scrolleable */}
+        <div className="px-5 py-4 overflow-y-auto flex-1">
           <StepIndicator step={step} needsComprobante={needsComprobante} />
           {submitError && (
             <div className="mb-3 border border-rojo/40 bg-rojo/10 px-3 py-2 text-xs font-sans text-rojo/90">
@@ -683,8 +684,9 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
             </motion.div>
           </AnimatePresence>
         </div>
+        {/* Footer — fijo */}
         {step < totalSteps && (
-          <div className="px-5 py-2.5 border-t border-carbon-medio flex items-center gap-2">
+          <div className="flex-shrink-0 px-5 py-2.5 border-t border-carbon-medio flex items-center gap-2">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-crema/12">
               <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
             </svg>

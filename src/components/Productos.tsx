@@ -166,7 +166,7 @@ export default function Productos() {
 
               {/* Info del producto */}
               <div
-                className={`bg-carbon p-10 lg:p-14 flex flex-col justify-center gap-6 ${
+                className={`bg-carbon p-6 md:p-10 lg:p-14 flex flex-col justify-center gap-6 ${
                   i % 2 === 1 ? "lg:order-1" : ""
                 }`}
               >
@@ -261,7 +261,7 @@ export default function Productos() {
             />
             <div className="absolute inset-0 bg-gradient-to-r from-carbon/60 to-transparent" />
           </div>
-          <div className="bg-carbon p-10 lg:p-14 flex flex-col justify-center gap-6">
+          <div className="bg-carbon p-6 md:p-10 lg:p-14 flex flex-col justify-center gap-6">
             <div>
               <p className="text-xs tracking-[0.4em] text-oro uppercase font-sans mb-2">
                 Colección completa
