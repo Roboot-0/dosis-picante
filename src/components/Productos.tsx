@@ -28,7 +28,7 @@ const salsas = [
     numero: "02",
     tagline: "La que convierte",
     descripcion:
-      "Habanero + Carolina Reaper ahumado. Un perfil profundo que empieza en el paladar y termina en adicción. El ahumado llega primero, el fuego después.",
+      "Habanero + Carolina Reaper combinado con vegetales ahumados. Un perfil profundo que empieza en el paladar y termina en adicción. El ahumado llega primero, el fuego después.",
     nivel: 2,
     scoville: "~100,000 SHU",
     ml: "50 ml",
@@ -36,7 +36,7 @@ const salsas = [
     color: "#EA580C",
     imagen: "/images/ahumadosis-clean.png",
     lifestyle: "/images/uso-ahumadosis.jpg",
-    tags: ["Habanero", "Reaper ahumado", "Compleja"],
+    tags: ["Habanero", "Carolina Reaper", "Ahumado"],
     usos: ["Parrillas y asados", "Hamburguesas gourmet", "Marinadas", "Sopas y guisos"],
   },
   {
@@ -126,6 +126,7 @@ export default function Productos() {
           {salsas.map((salsa, i) => (
             <motion.div
               key={salsa.id}
+              id={salsa.id}
               initial={{ opacity: 0, y: 60 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}

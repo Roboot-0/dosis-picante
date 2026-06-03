@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 
 const BOTTLES = [
@@ -8,27 +9,30 @@ const BOTTLES = [
     src: "/images/ahumadosis-clean.png",
     name: "AHUMADOSIS",
     sub: "Ahumado · Dulce",
+    href: "/salsas#ahumadosis",
     delay: 0.15,
-    spinDuration: 11,
     floatDelay: 0.3,
+    rockDuration: 6.5,
     big: false,
   },
   {
     src: "/images/sobredosis-clean.png",
     name: "SOBREDOSIS",
     sub: "Intenso · Profundo",
+    href: "/salsas#sobredosis",
     delay: 0,
-    spinDuration: 14,
     floatDelay: 0,
+    rockDuration: 8,
     big: true,
   },
   {
     src: "/images/microdosis-clean.png",
     name: "MICRODOSIS",
     sub: "Suave · Frutal",
+    href: "/salsas#microdosis",
     delay: 0.3,
-    spinDuration: 9,
     floatDelay: 0.6,
+    rockDuration: 5.5,
     big: false,
   },
 ];
@@ -115,55 +119,57 @@ export default function Hero() {
               initial={{ opacity: 0, y: 36 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.0 + bottle.delay, duration: 0.75 }}
-              className="flex flex-col items-center gap-3"
+              style={{ pointerEvents: "auto" }}
             >
-              {/* Float */}
-              <motion.div
-                animate={{ y: [0, -13, 0] }}
-                transition={{
-                  duration: 3.6,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: bottle.floatDelay,
-                }}
-              >
-                {/* Spin 3D */}
+              <Link href={bottle.href} className="flex flex-col items-center gap-3 group cursor-pointer">
+                {/* Float */}
                 <motion.div
-                  animate={{ rotateY: 360 }}
+                  animate={{ y: [0, -13, 0] }}
                   transition={{
-                    duration: bottle.spinDuration,
+                    duration: 3.6,
                     repeat: Infinity,
-                    ease: "linear",
+                    ease: "easeInOut",
+                    delay: bottle.floatDelay,
                   }}
-                  style={{ transformStyle: "preserve-3d" }}
                 >
-                  <Image
-                    src={bottle.src}
-                    alt={bottle.name}
-                    width={160}
-                    height={320}
-                    className={`h-auto ${
-                      bottle.big
-                        ? "w-[82px] md:w-[100px] lg:w-[118px]"
-                        : "w-[64px] md:w-[80px] lg:w-[94px]"
-                    }`}
-                    style={{
-                      filter:
-                        "drop-shadow(0 20px 44px rgba(0,0,0,0.70)) drop-shadow(0 0 22px rgba(220,38,38,0.14))",
+                  {/* Balanceo 3D oscilante — no llega al canto, siempre se ve como objeto */}
+                  <motion.div
+                    animate={{ rotateY: [-25, 25, -25] }}
+                    whileHover={{ scale: 1.07 }}
+                    transition={{
+                      rotateY: { duration: bottle.rockDuration, repeat: Infinity, ease: "easeInOut", delay: bottle.floatDelay },
+                      scale: { type: "spring", stiffness: 300, damping: 20 },
                     }}
-                  />
+                    style={{ transformStyle: "preserve-3d" }}
+                  >
+                    <Image
+                      src={bottle.src}
+                      alt={bottle.name}
+                      width={160}
+                      height={320}
+                      className={`h-auto ${
+                        bottle.big
+                          ? "w-[82px] md:w-[100px] lg:w-[118px]"
+                          : "w-[64px] md:w-[80px] lg:w-[94px]"
+                      }`}
+                      style={{
+                        filter:
+                          "drop-shadow(0 20px 44px rgba(0,0,0,0.70)) drop-shadow(0 0 22px rgba(220,38,38,0.14))",
+                      }}
+                    />
+                  </motion.div>
                 </motion.div>
-              </motion.div>
 
-              {/* Label */}
-              <div className="text-center">
-                <p className="font-bebas text-[10px] md:text-[11px] tracking-[0.28em] text-crema/75 leading-none">
-                  {bottle.name}
-                </p>
-                <p className="font-mono text-[6px] md:text-[7px] tracking-[0.2em] text-crema/30 mt-0.5">
-                  {bottle.sub}
-                </p>
-              </div>
+                {/* Label */}
+                <div className="text-center">
+                  <p className="font-bebas text-[10px] md:text-[11px] tracking-[0.28em] text-crema/75 group-hover:text-rojo transition-colors leading-none">
+                    {bottle.name}
+                  </p>
+                  <p className="font-mono text-[6px] md:text-[7px] tracking-[0.2em] text-crema/30 mt-0.5">
+                    {bottle.sub}
+                  </p>
+                </div>
+              </Link>
             </motion.div>
           ))}
         </motion.div>

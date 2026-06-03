@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { useRef } from "react";
 
 const usosHome = [
@@ -140,68 +141,82 @@ function UsoCard({
   const imgY = useTransform(scrollYProgress, [0, 1], ["8%", "-8%"]);
 
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 60 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ type: "spring", stiffness: 60, damping: 16, delay: index * 0.12 }}
-      whileHover={{ y: -6, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-      className="group relative bg-carbon overflow-hidden cursor-default"
-    >
-      {/* Imagen con parallax */}
-      <div className="relative h-[420px] lg:h-[520px] overflow-hidden">
-        <motion.div style={{ y: imgY }} className="absolute inset-[-10%] w-[120%] h-[120%]">
-          <Image
-            src={uso.imagen}
-            alt={`${uso.nombre} — ${uso.contexto}`}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-700"
-            sizes="(max-width: 1024px) 100vw, 33vw"
-          />
-        </motion.div>
+    <Link href={`/salsas#${uso.id}`} className="block group">
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: 60 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ type: "spring", stiffness: 60, damping: 16, delay: index * 0.12 }}
+        whileHover={{ y: -6, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+        className="relative bg-carbon overflow-hidden cursor-pointer"
+      >
+        {/* Imagen con parallax */}
+        <div className="relative h-[420px] lg:h-[520px] overflow-hidden">
+          <motion.div style={{ y: imgY }} className="absolute inset-[-10%] w-[120%] h-[120%]">
+            <Image
+              src={uso.imagen}
+              alt={`${uso.nombre} — ${uso.contexto}`}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-700"
+              sizes="(max-width: 1024px) 100vw, 33vw"
+            />
+          </motion.div>
 
-        {/* Overlay gradiente bottom */}
-        <div className="absolute inset-0 bg-gradient-to-t from-carbon via-carbon/40 to-transparent z-10" />
+          {/* Overlay gradiente bottom */}
+          <div className="absolute inset-0 bg-gradient-to-t from-carbon via-carbon/40 to-transparent z-10" />
 
-        {/* Número decorativo */}
-        <span
-          className="absolute top-5 right-5 font-bebas text-7xl leading-none opacity-20 select-none z-10"
-          style={{ color: uso.color }}
-        >
-          {uso.numero}
-        </span>
-
-        {/* Tag pill */}
-        <div className="absolute top-5 left-5 z-20">
+          {/* Número decorativo */}
           <span
-            className="font-mono text-[9px] tracking-[0.3em] uppercase px-3 py-1.5 border"
-            style={{ color: uso.color, borderColor: `${uso.color}60`, background: `${uso.color}15` }}
+            className="absolute top-5 right-5 font-bebas text-7xl leading-none opacity-20 select-none z-10"
+            style={{ color: uso.color }}
           >
-            {uso.tag}
+            {uso.numero}
           </span>
+
+          {/* Tag pill */}
+          <div className="absolute top-5 left-5 z-20">
+            <span
+              className="font-mono text-[9px] tracking-[0.3em] uppercase px-3 py-1.5 border"
+              style={{ color: uso.color, borderColor: `${uso.color}60`, background: `${uso.color}15` }}
+            >
+              {uso.tag}
+            </span>
+          </div>
+
+          {/* CTA hover */}
+          <div className="absolute bottom-20 right-6 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span
+              className="font-bebas text-[11px] tracking-[0.3em] uppercase flex items-center gap-1.5"
+              style={{ color: uso.color }}
+            >
+              Ver salsa
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Texto */}
-      <div className="relative z-20 px-7 pb-8 -mt-16">
-        <p className="text-[10px] tracking-[0.35em] uppercase font-sans mb-2" style={{ color: uso.color }}>
-          {uso.contexto}
-        </p>
-        <h3 className="font-bebas text-3xl tracking-wide text-crema mb-3">
-          {uso.nombre}
-        </h3>
-        <p className="text-sm text-crema/55 font-sans font-300 leading-relaxed">
-          {uso.copy}
-        </p>
-      </div>
+        {/* Texto */}
+        <div className="relative z-20 px-7 pb-8 -mt-16">
+          <p className="text-[10px] tracking-[0.35em] uppercase font-sans mb-2" style={{ color: uso.color }}>
+            {uso.contexto}
+          </p>
+          <h3 className="font-bebas text-3xl tracking-wide text-crema mb-3">
+            {uso.nombre}
+          </h3>
+          <p className="text-sm text-crema/55 font-sans font-300 leading-relaxed">
+            {uso.copy}
+          </p>
+        </div>
 
-      {/* Línea inferior animada */}
-      <div
-    
-        className="h-px w-0 group-hover:w-full transition-all duration-500"
-        style={{ background: `${uso.color}60` }}
-      />
-    </motion.div>
+        {/* Línea inferior animada */}
+        <div
+          className="h-px w-0 group-hover:w-full transition-all duration-500"
+          style={{ background: `${uso.color}60` }}
+        />
+      </motion.div>
+    </Link>
   );
 }

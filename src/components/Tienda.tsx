@@ -20,10 +20,10 @@ const WA_BASE    = "https://wa.me/584142624078";
 // ────────────────────────────────────────────────────────────────────────────
 
 const PRODUCTOS = [
-  { id: "microdosis", nombre: "MICRODOSIS", tagline: "El primer contacto",   precio: 6,  ml: "50 ml",              imagen: "/images/microdosis.png", color: "#D97706", nivel: 1 },
-  { id: "ahumadosis", nombre: "AHUMADOSIS", tagline: "La que convierte",      precio: 6,  ml: "50 ml",              imagen: "/images/ahumadosis.png", color: "#EA580C", nivel: 2 },
-  { id: "sobredosis", nombre: "SOBREDOSIS", tagline: "La última advertencia", precio: 12, ml: "30 ml",              imagen: "/images/sobredosis.png", color: "#DC2626", nivel: 3 },
-  { id: "kit",        nombre: "KIT DOSIS",  tagline: "Colección completa",    precio: 22, ml: "2×50ml + 1×30ml",   imagen: "/images/kit-real.jpg",   color: "#9CA3AF", nivel: 3 },
+  { id: "microdosis", nombre: "MICRODOSIS", tagline: "El primer contacto",   precio: 6,  ml: "50 ml",            imagen: "/images/microdosis.png", color: "#D97706", nivel: 1, descripcion: "Habanero + ají dulce venezolano. Fermentada naturalmente. El calor llega despacio, con sabor y sin apresurarse.", scoville: "~40,000 SHU · Nivel suave" },
+  { id: "ahumadosis", nombre: "AHUMADOSIS", tagline: "La que convierte",      precio: 6,  ml: "50 ml",            imagen: "/images/ahumadosis.png", color: "#EA580C", nivel: 2, descripcion: "Habanero + Carolina Reaper combinado con vegetales ahumados. El ahumado llega primero, el fuego después.", scoville: "~100,000 SHU · Nivel medio" },
+  { id: "sobredosis", nombre: "SOBREDOSIS", tagline: "La última advertencia", precio: 12, ml: "30 ml",            imagen: "/images/sobredosis.png", color: "#DC2626", nivel: 3, descripcion: "Carolina Reaper + Trinidad Scorpion. No crece y se va — se instala. Para quien ya conoce su límite y decide ignorarlo.", scoville: "~1,200,000 SHU · Nivel extremo" },
+  { id: "kit",        nombre: "KIT DOSIS",  tagline: "Colección completa",    precio: 22, ml: "2×50ml + 1×30ml", imagen: "/images/kit-real.jpg",   color: "#9CA3AF", nivel: 3, descripcion: "Las tres fórmulas juntas: Microdosis + Ahumadosis + Sobredosis. La experiencia completa, de menor a mayor intensidad.", scoville: "Las 3 salsas · Ahorras $2" },
 ];
 
 type Cart = Record<string, number>;
@@ -91,6 +91,7 @@ function StepCarrito({
   const [codigoCupon, setCodigoCupon] = useState(cupon?.codigo ?? "");
   const [cuponEstado, setCuponEstado] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [cuponMsg, setCuponMsg] = useState("");
+  const [infoId, setInfoId] = useState<string | null>(null);
 
   const subtotal = PRODUCTOS.reduce((s, p) => s + (cart[p.id] ?? 0) * p.precio, 0);
   const descuento = cupon
@@ -137,23 +138,58 @@ function StepCarrito({
       <div className="divide-y divide-carbon-medio border border-carbon-medio mb-3">
         {PRODUCTOS.map((p) => {
           const qty = cart[p.id] ?? 0;
+          const isExpanded = infoId === p.id;
           return (
-            <div key={p.id} className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${qty > 0 ? "bg-rojo/5" : ""}`}>
-              <div className="relative w-11 h-11 flex-shrink-0 bg-carbon-medio">
-                <Image src={p.imagen} alt={p.nombre} fill className="object-contain p-1" sizes="44px" />
+            <div key={p.id} className={`transition-colors ${qty > 0 ? "bg-rojo/5" : ""}`}>
+              {/* Fila principal */}
+              <div className="flex items-center gap-3 px-4 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setInfoId(isExpanded ? null : p.id)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+                >
+                  <div className="relative w-11 h-11 flex-shrink-0 bg-carbon-medio">
+                    <Image src={p.imagen} alt={p.nombre} fill className="object-contain p-1" sizes="44px" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-bebas text-base tracking-wide leading-none" style={{ color: p.color }}>{p.nombre}</p>
+                      <svg
+                        width="10" height="10" viewBox="0 0 24 24" fill="none"
+                        className={`text-crema/20 flex-shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                      >
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <p className="text-[10px] text-crema/30 font-sans">{p.ml} · <span className="text-crema/50">${p.precio}</span></p>
+                    <Dots nivel={p.nivel} color={p.color} />
+                  </div>
+                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => update(p.id, -1)} disabled={qty === 0}
+                    className="w-10 h-10 border border-carbon-medio flex items-center justify-center text-crema/40 hover:border-rojo hover:text-rojo disabled:opacity-20 disabled:cursor-not-allowed transition-all font-mono text-base leading-none">−</button>
+                  <span className="font-bebas text-lg w-6 text-center text-crema tabular-nums">{qty}</span>
+                  <button onClick={() => update(p.id, 1)}
+                    className="w-10 h-10 border border-carbon-medio flex items-center justify-center text-crema/40 hover:border-rojo hover:text-rojo transition-all font-mono text-base leading-none">+</button>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bebas text-base tracking-wide leading-none" style={{ color: p.color }}>{p.nombre}</p>
-                <p className="text-[10px] text-crema/30 font-sans">{p.ml} · <span className="text-crema/50">${p.precio}</span></p>
-                <Dots nivel={p.nivel} color={p.color} />
-              </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => update(p.id, -1)} disabled={qty === 0}
-                  className="w-10 h-10 border border-carbon-medio flex items-center justify-center text-crema/40 hover:border-rojo hover:text-rojo disabled:opacity-20 disabled:cursor-not-allowed transition-all font-mono text-base leading-none">−</button>
-                <span className="font-bebas text-lg w-6 text-center text-crema tabular-nums">{qty}</span>
-                <button onClick={() => update(p.id, 1)}
-                  className="w-10 h-10 border border-carbon-medio flex items-center justify-center text-crema/40 hover:border-rojo hover:text-rojo transition-all font-mono text-base leading-none">+</button>
-              </div>
+              {/* Descripción expandible */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-3 pt-1 ml-14 border-t border-carbon-medio/40">
+                      <p className="text-[11px] text-crema/50 font-sans leading-relaxed">{p.descripcion}</p>
+                      <p className="text-[9px] font-mono tracking-widest mt-1.5" style={{ color: p.color }}>{p.scoville}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}
