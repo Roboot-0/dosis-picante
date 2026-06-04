@@ -141,7 +141,7 @@ function UsoCard({
   const imgY = useTransform(scrollYProgress, [0, 1], ["8%", "-8%"]);
 
   return (
-    <Link href={`/salsas#${uso.id}`} className="block group">
+    <Link href={`/salsas#${uso.id}`} className="block">
       <motion.div
         ref={ref}
         initial={{ opacity: 0, y: 60 }}
@@ -149,7 +149,7 @@ function UsoCard({
         viewport={{ once: true, margin: "-60px" }}
         transition={{ type: "spring", stiffness: 60, damping: 16, delay: index * 0.12 }}
         whileHover={{ y: -6, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-        className="relative bg-carbon overflow-hidden cursor-pointer"
+        className="group relative bg-carbon overflow-hidden cursor-pointer"
       >
         {/* Imagen con parallax */}
         <div className="relative h-[420px] lg:h-[520px] overflow-hidden">
